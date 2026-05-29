@@ -42,7 +42,7 @@ TEMPLATES = {
     },
 
     "Monitoring Pelanggan | Sales Offline (PerBulan)": {
-        "output_file": "CLEANING_MONITORING_PELANGGAN.xlsx",
+        "output_file": "CLEANING_MONITORING_PELANGGAN_PerBulan.xlsx",
         "sheet_name": "Monitoring Pelanggan",
         "use_master_kota": True,
         "sku_filter": None,
@@ -69,8 +69,8 @@ TEMPLATES = {
         "kolom_tanggal": ["Tanggal"],
     },
 
-    "Cleaning Monitoring Pelanggan | Sales Offline (Data2026)": {
-        "output_file": "CLEANING_MONITORING_PELANGGAN_DATA2026.xlsx",
+    "Monitoring Pelanggan | Sales Offline (Data2026)": {
+        "output_file": "CLEANING_MONITORING_PELANGGAN_Data2026.xlsx",
         "sheet_name": "Monitoring Pelanggan 2026",
         "use_master_kota": True,
         "sku_filter": None,
@@ -99,7 +99,7 @@ TEMPLATES = {
         "kolom_tanggal": ["Tanggal"],
     },
 
-    "Cleaning Data Pelanggan 2026 | Sales Offline": {
+    "Data Pelanggan 2026 | Sales Offline": {
         "output_file": "CLEANING_DATA_PELANGGAN_2026_OFFLINE.xlsx",
         "sheet_name": "Data Pelanggan 2026",
         "use_master_kota": True,
@@ -158,7 +158,7 @@ TEMPLATES = {
 
     "Filter SKU Diskon (Bu Dhany)": {
         "type": "merge_sku",          # tipe khusus: bukan cleaning biasa
-        "output_file": "hasil_riwayat_filtered.xlsx",
+        "output_file": "hasil_riwayat_filtered_BuDhany.xlsx",
         "sheet_name": "Riwayat Filtered",
         "merge_key": "SKU",           # kolom join di kedua file
         "sku_cols": ["SKU", "SEGMENT"], # kolom yang diambil dari SKU List
