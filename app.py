@@ -174,6 +174,13 @@ TEMPLATES = {
         "output_file": "PENJUALAN_BOSCH_PTRA.xlsx",
         "use_master_kota": False,
     },
+
+    "Penjualan Marketplace Bosch": {
+        "type": "bosch_marketplace",
+        "output_file": "HASIL_CLEANING_DATA.xlsx",
+        "sheet_name": "DATA",
+        "use_master_kota": False,
+    },
 }
 
 MARKETPLACE_KEYWORDS = ['shopee', 'tiktok', 'lazada', 'blibli', 'tokopedia']
@@ -242,6 +249,91 @@ def build_ptra(df, kw_map):
     df_sales = df_clean[~mask_mp].reset_index(drop=True)
 
     return df_clean, df_mp, df_sales
+
+def build_bosch_marketplace(df):
+    """
+    Cleaning Penjualan Marketplace Bosch
+    Hanya mengambil pelanggan:
+    Shopee, TikTok, Lazada, Blibli, Tokopedia
+    """
+
+    marketplace_keywords = [
+        'shopee',
+        'tiktok',
+        'tik tok',
+        'lazada',
+        'blibli',
+        'tokopedia'
+    ]
+
+    pattern = '|'.join(marketplace_keywords)
+
+    if 'Pelanggan' in df.columns:
+        df = df[
+            df['Pelanggan']
+            .astype(str)
+            .str.contains(pattern, case=False, na=False)
+        ].copy()
+
+    df_clean = pd.DataFrame()
+
+    df_clean['Tanggal']      = pd.to_datetime(
+        df['Tanggal'],
+        errors='coerce'
+    ) if 'Tanggal' in df.columns else np.nan
+
+    df_clean['Nomor #']      = df['Nomor #'] if 'Nomor #' in df.columns else np.nan
+    df_clean['Pelanggan']    = df['Pelanggan'] if 'Pelanggan' in df.columns else np.nan
+    df_clean['Kode #']       = df['Kode #'] if 'Kode #' in df.columns else np.nan
+    df_clean['Nama Barang']  = df['Nama Barang'] if 'Nama Barang' in df.columns else np.nan
+
+    df_clean['QTY'] = pd.to_numeric(
+        df['Kuantitas'],
+        errors='coerce'
+    ) if 'Kuantitas' in df.columns else np.nan
+
+    df_clean['@Harga'] = pd.to_numeric(
+        df['@Harga'],
+        errors='coerce'
+    ) if '@Harga' in df.columns else np.nan
+
+    df_clean['Total Harga'] = pd.to_numeric(
+        df['Total Harga'],
+        errors='coerce'
+    ) if 'Total Harga' in df.columns else np.nan
+
+    df_clean['Laba'] = pd.to_numeric(
+        df['Laba'],
+        errors='coerce'
+    ) if 'Laba' in df.columns else np.nan
+
+    df_clean['Gross Profit/Item'] = (
+        df_clean['Laba'] /
+        df_clean['QTY'].replace(0, np.nan)
+    )
+
+    # trim text
+    for col in df_clean.select_dtypes(include='object').columns:
+        df_clean[col] = df_clean[col].astype(str).str.strip()
+
+    # hapus data invalid
+    mandatory_cols = [
+        'Tanggal',
+        'Nomor #',
+        'Kode #',
+        'Nama Barang'
+    ]
+
+    mandatory_cols = [
+        col for col in mandatory_cols
+        if col in df_clean.columns
+    ]
+
+    df_clean = df_clean.dropna(
+        subset=mandatory_cols
+    ).reset_index(drop=True)
+
+    return df_clean
 
 # ============================================================
 # STYLING
@@ -316,6 +408,12 @@ with st.sidebar:
         st.write("🗺️ Master Kota: ❌")   # <-- ubah jadi ❌
         st.write("🏪 Pisah Marketplace: ✅")
         st.write("📦 Mapping Kategori: ✅")
+    elif cfg.get("type") == "bosch_marketplace":
+        st.write(f"📄 Output: `{cfg['output_file']}`")
+        st.write(f"📋 Sheet: `{cfg['sheet_name']}`")
+        st.write("🏪 Hanya Marketplace")
+        st.write("🗺️ Master Kota: ❌")
+        st.write("📈 Gross Profit/Item: ✅")
     else:
         st.write(f"📄 Output: `{cfg['output_file']}`")
         st.write(f"📋 Sheet: `{cfg['sheet_name']}`")
@@ -541,6 +639,136 @@ elif cfg.get("type") == "bosch_ptra":
             st.exception(e)
     else:
         st.info("👆 Upload Data Original untuk memulai.")
+
+# ============================================================
+# CABANG: PENJUALAN MARKETPLACE BOSCH
+# ============================================================
+elif cfg.get("type") == "bosch_marketplace":
+
+    st.markdown(
+        '<div class="step-label">📂 Step 1 — Data Original</div>',
+        unsafe_allow_html=True
+    )
+
+    file_ori = st.file_uploader(
+        "Upload Data Original (.xlsx)",
+        type=["xlsx"],
+        key="bosch_marketplace"
+    )
+
+    if file_ori:
+
+        try:
+
+            df = pd.read_excel(file_ori)
+
+            df = df.loc[
+                :,
+                ~df.columns.astype(str).str.startswith('Unnamed')
+            ]
+
+            df.columns = df.columns.str.strip()
+
+            with st.expander(
+                "👁️ Preview Data Original",
+                expanded=False
+            ):
+                st.dataframe(
+                    df.head(10),
+                    use_container_width=True
+                )
+
+            with st.spinner(
+                "⚙️ Sedang memproses data marketplace..."
+            ):
+                df_clean = build_bosch_marketplace(df)
+
+            st.markdown("---")
+            st.markdown("### 📊 Hasil Cleaning")
+
+            c1, c2, c3, c4 = st.columns(4)
+
+            c1.markdown(
+                f'''
+                <div class="stat-card">
+                    <div class="label">Total Data</div>
+                    <div class="value">{len(df_clean):,}</div>
+                </div>
+                ''',
+                unsafe_allow_html=True
+            )
+
+            c2.markdown(
+                f'''
+                <div class="stat-card">
+                    <div class="label">Nota Unik</div>
+                    <div class="value">{df_clean["Nomor #"].nunique():,}</div>
+                </div>
+                ''',
+                unsafe_allow_html=True
+            )
+
+            c3.markdown(
+                f'''
+                <div class="stat-card">
+                    <div class="label">Pelanggan Unik</div>
+                    <div class="value">{df_clean["Pelanggan"].nunique():,}</div>
+                </div>
+                ''',
+                unsafe_allow_html=True
+            )
+
+            c4.markdown(
+                f'''
+                <div class="stat-card">
+                    <div class="label">SKU Unik</div>
+                    <div class="value">{df_clean["Kode #"].nunique():,}</div>
+                </div>
+                ''',
+                unsafe_allow_html=True
+            )
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            st.dataframe(
+                df_clean.head(20),
+                use_container_width=True
+            )
+
+            def to_excel_marketplace(df):
+                buf = BytesIO()
+
+                with pd.ExcelWriter(
+                    buf,
+                    engine='openpyxl'
+                ) as writer:
+
+                    df.to_excel(
+                        writer,
+                        index=False,
+                        sheet_name=cfg["sheet_name"]
+                    )
+
+                return buf.getvalue()
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            st.download_button(
+                label=f"⬇️ Download {cfg['output_file']}",
+                data=to_excel_marketplace(df_clean),
+                file_name=cfg["output_file"],
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+            )
+
+        except Exception as e:
+            st.error(f"❌ Error saat memproses: {e}")
+            st.exception(e)
+
+    else:
+        st.info(
+            "👆 Upload Data Original untuk memulai proses cleaning."
+        )
 
 # ============================================================
 # CABANG: CLEANING BIASA
