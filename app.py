@@ -185,10 +185,9 @@ def filter_toko(nilai):
     return np.nan
 
 def map_bu(divisi, nama_barang):
-    """Mapping BU berdasarkan kode Divisi. Fallback ke Nama Barang jika tidak cocok."""
     if pd.isna(divisi):
         return nama_barang
-    divisi_str = str(divisi).strip()
+    divisi_str = str(divisi).strip().lstrip("'\"").strip()  # buang spasi + quote tersembunyi
     if divisi_str == '71':
         return 'BE GT'
     elif divisi_str == '82':
@@ -385,10 +384,13 @@ elif cfg.get("type") == "bosch_sellout":
                 df_clean['Nominal (Include)']      = pd.to_numeric(df['Total Harga'], errors='coerce') if 'Total Harga' in df.columns else np.nan
                 df_clean['Part']                   = df['Kode #'] if 'Kode #' in df.columns else np.nan
                 df_clean['Nama Barang']            = df['Nama Barang'] if 'Nama Barang' in df.columns else np.nan
-                df_clean['BU']                     = df.apply(
-                                                         lambda row: map_bu(row.get('Divisi'), row.get('Nama Barang')),
-                                                         axis=1
-                                                     )
+                df_clean['BU'] = df.apply(
+                    lambda row: map_bu(
+                        str(row['Divisi']).strip() if 'Divisi' in df.columns and pd.notna(row['Divisi']) else None,
+                        row['Nama Barang'] if 'Nama Barang' in df.columns else None
+                    ),
+                    axis=1
+                )
 
                 # Trim semua kolom object
                 for col in df_clean.select_dtypes(include='object').columns:
