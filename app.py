@@ -162,14 +162,14 @@ TEMPLATES = {
         "sku_cols": ["SKU", "SEGMENT"],
     },
 
-    "Laporan Sell Out Bosch": {
+    "Laporan Sell Out Bosch (Pak Sonny)": {
         "type": "bosch_sellout",
         "output_file": "HASIL_CLEANING_DATA.xlsx",
         "sheet_name": "DATA",
         "use_master_kota": False,
     },
 
-    "Penjualan Bosch PTRA": {
+    "Penjualan Bosch PTRA (Bu Hasna)": {
         "type": "bosch_ptra",
         "output_file": "PENJUALAN_BOSCH_PTRA.xlsx",
         "use_master_kota": False,
