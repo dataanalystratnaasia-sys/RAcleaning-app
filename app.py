@@ -175,9 +175,9 @@ TEMPLATES = {
         "use_master_kota": False,
     },
 
-    "Penjualan Marketplace Bosch": {
+    "Kuadran Marketplace": {
         "type": "bosch_marketplace",
-        "output_file": "HASIL_CLEANING_DATA.xlsx",
+        "output_file": "DATA_Marketplace.xlsx",
         "sheet_name": "DATA",
         "use_master_kota": False,
     },
