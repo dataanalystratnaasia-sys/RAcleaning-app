@@ -168,9 +168,20 @@ TEMPLATES = {
         "sheet_name": "DATA",
         "use_master_kota": False,
     },
+
+    "Penjualan Bosch PTRA": {
+        "type": "bosch_ptra",
+        "output_file": "PENJUALAN_BOSCH_PTRA.xlsx",
+        "use_master_kota": True,
+    },
 }
 
 MARKETPLACE_KEYWORDS = ['shopee', 'tiktok', 'lazada', 'blibli', 'tokopedia']
+
+def is_marketplace(nilai):
+    if pd.isna(nilai):
+        return False
+    return any(kw in str(nilai).lower() for kw in MARKETPLACE_KEYWORDS)
 
 def filter_toko(nilai):
     if pd.isna(nilai):
@@ -184,7 +195,6 @@ def map_bu(divisi_raw, nama_barang):
     if divisi_raw is None or (isinstance(divisi_raw, float) and np.isnan(divisi_raw)):
         return nama_barang
     divisi_str = str(divisi_raw).strip()
-    # handle float string seperti "71.0"
     try:
         divisi_str = str(int(float(divisi_str)))
     except (ValueError, TypeError):
@@ -201,6 +211,52 @@ def map_bu(divisi_raw, nama_barang):
         return 'SP'
     else:
         return nama_barang
+
+def build_ptra(df, kw_map):
+    """Bangun df_clean untuk template Penjualan Bosch PTRA."""
+    df_clean = pd.DataFrame()
+
+    df_clean['Tanggal']              = pd.to_datetime(df['Tanggal'], errors='coerce') if 'Tanggal' in df.columns else np.nan
+    df_clean['Nomor #']              = df['Nomor #'] if 'Nomor #' in df.columns else np.nan
+    df_clean['Pelanggan']            = df['Pelanggan'] if 'Pelanggan' in df.columns else np.nan
+    df_clean['Kode #']               = df['Kode #'] if 'Kode #' in df.columns else np.nan
+    df_clean['Nama Barang']          = df['Nama Barang'] if 'Nama Barang' in df.columns else np.nan
+    df_clean['Kuantitas']            = pd.to_numeric(df['Kuantitas'], errors='coerce') if 'Kuantitas' in df.columns else np.nan
+    df_clean['@Harga']               = pd.to_numeric(df['@Harga'], errors='coerce') if '@Harga' in df.columns else np.nan
+    df_clean['Total Harga']          = pd.to_numeric(df['Total Harga'], errors='coerce') if 'Total Harga' in df.columns else np.nan
+    df_clean['Nama Tenaga Penjual']  = df['Nama Tenaga Penjual'] if 'Nama Tenaga Penjual' in df.columns else np.nan
+    df_clean['Kategori']             = df.apply(
+        lambda row: map_bu(
+            row['Divisi'] if 'Divisi' in df.columns else None,
+            row['Nama Barang'] if 'Nama Barang' in df.columns else None
+        ), axis=1
+    )
+
+    # Kota dari master kota
+    if kw_map and 'Alamat Pengiriman Pesanan Detail Pengiriman Pesan' in df.columns:
+        def extract_kota(alamat):
+            if pd.isna(alamat):
+                return np.nan
+            alamat = str(alamat)
+            for keyword, hasil in kw_map:
+                pattern = r'\b' + re.escape(keyword) + r'\b'
+                if re.search(pattern, alamat, flags=re.IGNORECASE):
+                    return hasil
+            return np.nan
+        df_clean['Kota'] = df['Alamat Pengiriman Pesanan Detail Pengiriman Pesan'].apply(extract_kota)
+    else:
+        df_clean['Kota'] = np.nan
+
+    # Trim kolom object
+    for col in df_clean.select_dtypes(include='object').columns:
+        df_clean[col] = df_clean[col].str.strip()
+
+    # Pisah berdasarkan marketplace
+    mask_mp    = df_clean['Pelanggan'].apply(is_marketplace)
+    df_mp      = df_clean[mask_mp].reset_index(drop=True)
+    df_sales   = df_clean[~mask_mp].reset_index(drop=True)
+
+    return df_clean, df_mp, df_sales
 
 # ============================================================
 # STYLING
@@ -247,7 +303,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================
-# SIDEBAR — PILIH TEMPLATE
+# SIDEBAR
 # ============================================================
 with st.sidebar:
     st.markdown("### ⚙️ Pengaturan")
@@ -268,6 +324,13 @@ with st.sidebar:
         st.write("🗺️ Master Kota: ❌")
         st.write("🏪 Filter Marketplace: ✅")
         st.write("📦 Mapping BU: ✅")
+    elif cfg.get("type") == "bosch_ptra":
+        st.write(f"📄 Output: `{cfg['output_file']}`")
+        st.write("📋 Sheet: `MP` + `SALES`")
+        st.write("🔧 Tipe: Penjualan Bosch PTRA")
+        st.write("🗺️ Master Kota: ✅")
+        st.write("🏪 Pisah Marketplace: ✅")
+        st.write("📦 Mapping Kategori: ✅")
     else:
         st.write(f"📄 Output: `{cfg['output_file']}`")
         st.write(f"📋 Sheet: `{cfg['sheet_name']}`")
@@ -299,7 +362,6 @@ if cfg.get("type") == "merge_sku":
         try:
             sku_df = pd.read_excel(file_sku)
             trx_df = pd.read_excel(file_trx)
-
             sku_df.columns = sku_df.columns.str.strip()
             trx_df.columns = trx_df.columns.str.strip()
 
@@ -367,13 +429,11 @@ elif cfg.get("type") == "bosch_sellout":
         try:
             df = pd.read_excel(file_ori, header=0)
             df = df.loc[:, ~df.columns.str.startswith('Unnamed')]
-            # strip semua nama kolom supaya tidak ada spasi tersembunyi
             df.columns = df.columns.str.strip()
 
             with st.expander("👁️ Preview Data Original", expanded=False):
                 st.dataframe(df.head(10), use_container_width=True)
 
-            # ── DEBUG: cek nilai kolom Divisi ──────────────────────
             with st.expander("🔍 Debug — Cek Kolom Divisi", expanded=True):
                 if 'Divisi' in df.columns:
                     sample = df['Divisi'].dropna().unique()[:10]
@@ -382,14 +442,11 @@ elif cfg.get("type") == "bosch_sellout":
                     st.write("Nilai unik (repr):", [repr(x) for x in sample])
                     st.write("Dtype:", df['Divisi'].dtype)
                 else:
-                    st.error(f"❌ Kolom 'Divisi' TIDAK ditemukan!")
+                    st.error("❌ Kolom 'Divisi' TIDAK ditemukan!")
                     st.write("Kolom tersedia:", df.columns.tolist())
-            # ── END DEBUG ──────────────────────────────────────────
 
             with st.spinner("⚙️ Sedang memproses Sell Out Bosch..."):
-
                 df_clean = pd.DataFrame()
-
                 df_clean['Invoice']                = np.nan
                 df_clean['Toko']                   = df['Pelanggan'].apply(filter_toko) if 'Pelanggan' in df.columns else np.nan
                 df_clean['Tgl Nota']               = pd.to_datetime(df['Tanggal'], errors='coerce') if 'Tanggal' in df.columns else np.nan
@@ -404,17 +461,13 @@ elif cfg.get("type") == "bosch_sellout":
                     lambda row: map_bu(
                         row['Divisi'] if 'Divisi' in df.columns else None,
                         row['Nama Barang'] if 'Nama Barang' in df.columns else None
-                    ),
-                    axis=1
+                    ), axis=1
                 )
-
-                # Trim semua kolom object
                 for col in df_clean.select_dtypes(include='object').columns:
                     df_clean[col] = df_clean[col].str.strip()
 
             st.markdown("---")
             st.markdown("### 📊 Hasil Cleaning")
-
             c1, c2, c3 = st.columns(3)
             c1.markdown(f'<div class="stat-card" style="border-left-color:#2563eb"><div class="label">Total Data</div><div class="value" style="color:#2563eb">{len(df_clean):,}</div></div>', unsafe_allow_html=True)
             c2.markdown(f'<div class="stat-card" style="border-left-color:#16a34a"><div class="label">Toko Terisi (Marketplace)</div><div class="value" style="color:#16a34a">{int(df_clean["Toko"].notna().sum()):,}</div></div>', unsafe_allow_html=True)
@@ -423,7 +476,7 @@ elif cfg.get("type") == "bosch_sellout":
             st.markdown("<br>", unsafe_allow_html=True)
             st.dataframe(df_clean.head(20), use_container_width=True)
 
-            def to_excel(df, sheet):
+            def to_excel_single(df, sheet):
                 buf = BytesIO()
                 with pd.ExcelWriter(buf, engine='openpyxl') as w:
                     df.to_excel(w, index=False, sheet_name=sheet)
@@ -433,7 +486,7 @@ elif cfg.get("type") == "bosch_sellout":
             st.markdown('<div class="step-label">📥 Step 2 — Download Hasil</div>', unsafe_allow_html=True)
             st.download_button(
                 label=f"⬇️ Download {cfg['output_file']}",
-                data=to_excel(df_clean, cfg["sheet_name"]),
+                data=to_excel_single(df_clean, cfg["sheet_name"]),
                 file_name=cfg["output_file"],
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
@@ -444,6 +497,87 @@ elif cfg.get("type") == "bosch_sellout":
             st.exception(e)
     else:
         st.info("👆 Upload file data original Bosch untuk memulai proses cleaning.")
+
+# ============================================================
+# CABANG: PENJUALAN BOSCH PTRA
+# ============================================================
+elif cfg.get("type") == "bosch_ptra":
+
+    # Step 1 — Master Kota
+    st.markdown('<div class="step-label">📋 Step 1 — Master Kota</div>', unsafe_allow_html=True)
+    file_master = st.file_uploader("Upload Master Kota (.xlsx)", type=["xlsx"], key="ptra_master")
+
+    kw_map = []
+    if file_master:
+        df_master = pd.read_excel(file_master)
+        df_master.columns = df_master.columns.str.strip()
+        for col in ['Keyword', 'Hasil']:
+            if col not in df_master.columns:
+                st.error(f"❌ Kolom **'{col}'** tidak ditemukan di Master Kota!")
+                st.stop()
+        df_master = df_master.dropna(subset=['Keyword', 'Hasil'])
+        df_master['Keyword'] = df_master['Keyword'].astype(str).str.strip()
+        df_master['Hasil']   = df_master['Hasil'].astype(str).str.strip()
+        df_master = df_master.sort_values(by='Keyword', key=lambda x: x.str.len(), ascending=False)
+        kw_map = list(zip(df_master['Keyword'], df_master['Hasil']))
+        st.success(f"✅ Master kota loaded — {len(kw_map)} keyword")
+
+    # Step 2 — Data Original
+    st.markdown('<div class="step-label">📂 Step 2 — Data Original</div>', unsafe_allow_html=True)
+    file_ori = st.file_uploader("Upload Data Original (.xlsx)", type=["xlsx"], key="ptra_ori")
+
+    if file_master and file_ori:
+        try:
+            df = pd.read_excel(file_ori, header=0)
+            df = df.loc[:, ~df.columns.str.startswith('Unnamed')]
+            df.columns = df.columns.str.strip()
+
+            with st.expander("👁️ Preview Data Original", expanded=False):
+                st.dataframe(df.head(10), use_container_width=True)
+
+            with st.spinner("⚙️ Sedang memproses Penjualan Bosch PTRA..."):
+                df_clean, df_mp, df_sales = build_ptra(df, kw_map)
+
+            st.markdown("---")
+            st.markdown("### 📊 Hasil Cleaning")
+
+            c1, c2, c3, c4 = st.columns(4)
+            c1.markdown(f'<div class="stat-card" style="border-left-color:#2563eb"><div class="label">Total Data</div><div class="value" style="color:#2563eb">{len(df_clean):,}</div></div>', unsafe_allow_html=True)
+            c2.markdown(f'<div class="stat-card" style="border-left-color:#7c3aed"><div class="label">Sheet MP</div><div class="value" style="color:#7c3aed">{len(df_mp):,}</div></div>', unsafe_allow_html=True)
+            c3.markdown(f'<div class="stat-card" style="border-left-color:#16a34a"><div class="label">Sheet SALES</div><div class="value" style="color:#16a34a">{len(df_sales):,}</div></div>', unsafe_allow_html=True)
+            c4.markdown(f'<div class="stat-card" style="border-left-color:#ea580c"><div class="label">Kota Terisi</div><div class="value" style="color:#ea580c">{int(df_clean["Kota"].notna().sum()):,}</div></div>', unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            tab1, tab2 = st.tabs(["🏪 Sheet MP (Marketplace)", "🧑‍💼 Sheet SALES"])
+            with tab1:
+                st.dataframe(df_mp.head(20), use_container_width=True)
+            with tab2:
+                st.dataframe(df_sales.head(20), use_container_width=True)
+
+            # Export 1 file, 2 sheet
+            def to_excel_ptra(df_mp, df_sales):
+                buf = BytesIO()
+                with pd.ExcelWriter(buf, engine='openpyxl') as w:
+                    df_mp.to_excel(w, index=False, sheet_name='MP')
+                    df_sales.to_excel(w, index=False, sheet_name='SALES')
+                return buf.getvalue()
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown('<div class="step-label">📥 Step 3 — Download Hasil</div>', unsafe_allow_html=True)
+            st.download_button(
+                label=f"⬇️ Download {cfg['output_file']} (2 sheet: MP + SALES)",
+                data=to_excel_ptra(df_mp, df_sales),
+                file_name=cfg["output_file"],
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+            )
+
+        except Exception as e:
+            st.error(f"❌ Error saat memproses: {e}")
+            st.exception(e)
+    else:
+        st.info("👆 Upload Master Kota dan Data Original untuk memulai.")
 
 # ============================================================
 # CABANG: CLEANING BIASA
@@ -464,9 +598,7 @@ else:
             df_master = df_master.dropna(subset=['Keyword', 'Hasil'])
             df_master['Keyword'] = df_master['Keyword'].astype(str).str.strip()
             df_master['Hasil']   = df_master['Hasil'].astype(str).str.strip()
-            df_master = df_master.sort_values(
-                by='Keyword', key=lambda x: x.str.len(), ascending=False
-            )
+            df_master = df_master.sort_values(by='Keyword', key=lambda x: x.str.len(), ascending=False)
             kw_map = list(zip(df_master['Keyword'], df_master['Hasil']))
             st.success(f"✅ Master kota loaded — {len(kw_map)} keyword")
     else:
@@ -495,7 +627,6 @@ else:
                 return np.nan
 
             with st.spinner("⚙️ Sedang memproses..."):
-
                 df_clean = pd.DataFrame()
                 missing = []
                 for out_col, in_col in cfg["kolom_map"].items():
@@ -516,9 +647,7 @@ else:
 
                 for col in cfg["kolom_tanggal"]:
                     if col in df_clean.columns:
-                        df_clean[col] = pd.to_datetime(
-                            df_clean[col], format=cfg["tanggal_format"], errors='coerce'
-                        )
+                        df_clean[col] = pd.to_datetime(df_clean[col], format=cfg["tanggal_format"], errors='coerce')
 
                 for col in cfg["kolom_numeric"]:
                     if col in df_clean.columns:
@@ -539,9 +668,7 @@ else:
                     sku_keywords = cfg["sku_filter"]["keyword_aktif"]
                     if sku_col in df_clean.columns:
                         pattern_sku = '|'.join(re.escape(k) for k in sku_keywords)
-                        mask = df_clean[sku_col].astype(str).str.contains(
-                            pattern_sku, flags=re.IGNORECASE, na=False
-                        )
+                        mask = df_clean[sku_col].astype(str).str.contains(pattern_sku, flags=re.IGNORECASE, na=False)
                         df_clean = df_clean[mask].reset_index(drop=True)
 
             if missing:
@@ -552,11 +679,11 @@ else:
 
             stats = [("Total Data", len(df_clean), "#2563eb")]
             if cfg["sku_filter"]:
-                stats.append(("Setelah Filter SKU", len(df_clean),            "#7c3aed"))
-                stats.append(("Dihapus (SKU)",      n_before - len(df_clean), "#dc2626"))
+                stats.append(("Setelah Filter SKU", len(df_clean), "#7c3aed"))
+                stats.append(("Dihapus (SKU)", n_before - len(df_clean), "#dc2626"))
             if cfg["use_master_kota"] and cfg["kolom_alamat"]:
                 stats.append(("Kota Terisi", int(df_clean['Kota'].notna().sum()), "#16a34a"))
-                stats.append(("Kota Kosong", int(df_clean['Kota'].isna().sum()),  "#dc2626"))
+                stats.append(("Kota Kosong", int(df_clean['Kota'].isna().sum()), "#dc2626"))
 
             cols = st.columns(len(stats))
             for col_st, (label, value, color) in zip(cols, stats):
