@@ -8,7 +8,6 @@ st.set_page_config(page_title="Cleaning Data Sales", page_icon="🧹", layout="w
 
 # ============================================================
 # KONFIGURASI TEMPLATE
-# Tambah template baru? Cukup tambah satu blok dict di sini.
 # ============================================================
 TEMPLATES = {
 
@@ -18,10 +17,9 @@ TEMPLATES = {
         "use_master_kota": True,
         "sku_filter": None,
         "tanggal_format": None,
-        "clean_hp": True,             # aktifkan cleaning nomor HP
-        "replace_nan_string": True,   # ganti string 'nan' dan '' jadi NaN
+        "clean_hp": True,
+        "replace_nan_string": True,
         "kolom_map": {
-            # nama kolom output     : nama kolom di file original
             "Tanggal":                  "Tanggal",
             "Pelanggan":                "Pelanggan",
             "Kode #":                   "Kode #",
@@ -36,7 +34,7 @@ TEMPLATES = {
             "Handphone":                "Handphone Kontak Utama Pelanggan Pesanan Penjuala",
         },
         "kolom_alamat":  "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
-        "kolom_hp":      "Handphone",   # nama kolom OUTPUT yang perlu di-clean
+        "kolom_hp":      "Handphone",
         "kolom_numeric": ["Kuantitas", "Total Harga"],
         "kolom_tanggal": ["Tanggal"],
     },
@@ -105,7 +103,7 @@ TEMPLATES = {
         "use_master_kota": True,
         "sku_filter": None,
         "tanggal_format": None,
-        "clean_hp": False,          # kolom Handphone tidak ada di template ini
+        "clean_hp": False,
         "replace_nan_string": True,
         "kolom_map": {
             "Divisi":                   "Divisi",
@@ -157,16 +155,52 @@ TEMPLATES = {
     },
 
     "Filter SKU Diskon (Bu Dhany)": {
-        "type": "merge_sku",          # tipe khusus: bukan cleaning biasa
+        "type": "merge_sku",
         "output_file": "hasil_riwayat_filtered_BuDhany.xlsx",
         "sheet_name": "Riwayat Filtered",
-        "merge_key": "SKU",           # kolom join di kedua file
-        "sku_cols": ["SKU", "SEGMENT"], # kolom yang diambil dari SKU List
+        "merge_key": "SKU",
+        "sku_cols": ["SKU", "SEGMENT"],
     },
 
-    # ── Slot untuk template berikutnya ──
-    # "Template 8 — ...": { ... },
+    # ─────────────────────────────────────────────────────────
+    # TEMPLATE BARU: Laporan Sell Out Bosch
+    # ─────────────────────────────────────────────────────────
+    "Laporan Sell Out Bosch": {
+        "type": "bosch_sellout",        # tipe khusus, dihandle di cabang tersendiri
+        "output_file": "HASIL_CLEANING_DATA.xlsx",
+        "sheet_name": "DATA",
+        "use_master_kota": False,       # tidak pakai master kota
+    },
 }
+
+MARKETPLACE_KEYWORDS = ['shopee', 'tiktok', 'lazada', 'blibli', 'tokopedia']
+
+def filter_toko(nilai):
+    """Hanya isi jika mengandung nama marketplace, selain itu kosongkan."""
+    if pd.isna(nilai):
+        return np.nan
+    nilai_str = str(nilai).strip()
+    if any(kw in nilai_str.lower() for kw in MARKETPLACE_KEYWORDS):
+        return nilai_str
+    return np.nan
+
+def map_bu(divisi, nama_barang):
+    """Mapping BU berdasarkan kode Divisi. Fallback ke Nama Barang jika tidak cocok."""
+    if pd.isna(divisi):
+        return nama_barang
+    divisi_str = str(divisi).strip()
+    if divisi_str == '71':
+        return 'BE GT'
+    elif divisi_str == '82':
+        return 'MT'
+    elif divisi_str in ('72', '73'):
+        return 'HG OG'
+    elif divisi_str == '74':
+        return 'ACC'
+    elif divisi_str == '75':
+        return 'SP'
+    else:
+        return nama_barang
 
 # ============================================================
 # STYLING
@@ -227,6 +261,13 @@ with st.sidebar:
         st.write(f"📋 Sheet: `{cfg['sheet_name']}`")
         st.write("🔀 Tipe: Merge SKU List + Riwayat")
         st.write(f"🔑 Join key: `{cfg['merge_key']}`")
+    elif cfg.get("type") == "bosch_sellout":
+        st.write(f"📄 Output: `{cfg['output_file']}`")
+        st.write(f"📋 Sheet: `{cfg['sheet_name']}`")
+        st.write("🔧 Tipe: Sell Out Bosch")
+        st.write("🗺️ Master Kota: ❌")
+        st.write("🏪 Filter Marketplace: ✅")
+        st.write("📦 Mapping BU: ✅")
     else:
         st.write(f"📄 Output: `{cfg['output_file']}`")
         st.write(f"📋 Sheet: `{cfg['sheet_name']}`")
@@ -259,11 +300,9 @@ if cfg.get("type") == "merge_sku":
             sku_df = pd.read_excel(file_sku)
             trx_df = pd.read_excel(file_trx)
 
-            # Strip kolom
             sku_df.columns = sku_df.columns.str.strip()
             trx_df.columns = trx_df.columns.str.strip()
 
-            # Validasi kolom SKU List
             for col in cfg["sku_cols"]:
                 if col not in sku_df.columns:
                     st.error(f"❌ Kolom **'{col}'** tidak ditemukan di SKU List!")
@@ -282,14 +321,8 @@ if cfg.get("type") == "merge_sku":
             with st.spinner("⚙️ Sedang merge data..."):
                 sku_df[merge_key] = sku_df[merge_key].astype(str)
                 trx_df[merge_key] = trx_df[merge_key].astype(str)
+                result = trx_df.merge(sku_df[cfg["sku_cols"]], on=merge_key, how="inner")
 
-                result = trx_df.merge(
-                    sku_df[cfg["sku_cols"]],
-                    on=merge_key,
-                    how="inner"
-                )
-
-            # Statistik
             st.markdown("---")
             st.markdown("### 📊 Hasil Merge")
             c1, c2, c3 = st.columns(3)
@@ -323,11 +356,82 @@ if cfg.get("type") == "merge_sku":
         st.info("👆 Upload kedua file di atas untuk memulai proses merge.")
 
 # ============================================================
-# CABANG: CLEANING BIASA (semua template selain merge_sku)
+# CABANG: LAPORAN SELL OUT BOSCH
+# ============================================================
+elif cfg.get("type") == "bosch_sellout":
+
+    st.markdown('<div class="step-label">📂 Step 1 — Data Original Bosch</div>', unsafe_allow_html=True)
+    file_ori = st.file_uploader("Upload Data Original (.xlsx)", type=["xlsx"], key="bosch_ori")
+
+    if file_ori:
+        try:
+            df = pd.read_excel(file_ori, header=0)
+            df = df.loc[:, ~df.columns.str.startswith('Unnamed')]
+
+            with st.expander("👁️ Preview Data Original", expanded=False):
+                st.dataframe(df.head(10), use_container_width=True)
+
+            with st.spinner("⚙️ Sedang memproses Sell Out Bosch..."):
+
+                df_clean = pd.DataFrame()
+
+                df_clean['Invoice']                = np.nan
+                df_clean['Toko']                   = df['Pelanggan'].apply(filter_toko) if 'Pelanggan' in df.columns else np.nan
+                df_clean['Tgl Nota']               = pd.to_datetime(df['Tanggal'], errors='coerce') if 'Tanggal' in df.columns else np.nan
+                df_clean['Bulan']                  = df_clean['Tgl Nota'].dt.month
+                df_clean['Tahun']                  = df_clean['Tgl Nota'].dt.year
+                df_clean['Qty']                    = pd.to_numeric(df['Kuantitas'], errors='coerce') if 'Kuantitas' in df.columns else np.nan
+                df_clean['Harga Satuan (Include)'] = pd.to_numeric(df['@Harga'], errors='coerce') if '@Harga' in df.columns else np.nan
+                df_clean['Nominal (Include)']      = pd.to_numeric(df['Total Harga'], errors='coerce') if 'Total Harga' in df.columns else np.nan
+                df_clean['Part']                   = df['Kode #'] if 'Kode #' in df.columns else np.nan
+                df_clean['Nama Barang']            = df['Nama Barang'] if 'Nama Barang' in df.columns else np.nan
+                df_clean['BU']                     = df.apply(
+                                                         lambda row: map_bu(row.get('Divisi'), row.get('Nama Barang')),
+                                                         axis=1
+                                                     )
+
+                # Trim semua kolom object
+                for col in df_clean.select_dtypes(include='object').columns:
+                    df_clean[col] = df_clean[col].str.strip()
+
+            st.markdown("---")
+            st.markdown("### 📊 Hasil Cleaning")
+
+            c1, c2, c3 = st.columns(3)
+            c1.markdown(f'<div class="stat-card" style="border-left-color:#2563eb"><div class="label">Total Data</div><div class="value" style="color:#2563eb">{len(df_clean):,}</div></div>', unsafe_allow_html=True)
+            c2.markdown(f'<div class="stat-card" style="border-left-color:#16a34a"><div class="label">Toko Terisi (Marketplace)</div><div class="value" style="color:#16a34a">{int(df_clean["Toko"].notna().sum()):,}</div></div>', unsafe_allow_html=True)
+            c3.markdown(f'<div class="stat-card" style="border-left-color:#dc2626"><div class="label">Toko Kosong</div><div class="value" style="color:#dc2626">{int(df_clean["Toko"].isna().sum()):,}</div></div>', unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.dataframe(df_clean.head(20), use_container_width=True)
+
+            def to_excel(df, sheet):
+                buf = BytesIO()
+                with pd.ExcelWriter(buf, engine='openpyxl') as w:
+                    df.to_excel(w, index=False, sheet_name=sheet)
+                return buf.getvalue()
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown('<div class="step-label">📥 Step 2 — Download Hasil</div>', unsafe_allow_html=True)
+            st.download_button(
+                label=f"⬇️ Download {cfg['output_file']}",
+                data=to_excel(df_clean, cfg["sheet_name"]),
+                file_name=cfg["output_file"],
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+            )
+
+        except Exception as e:
+            st.error(f"❌ Error saat memproses: {e}")
+            st.exception(e)
+    else:
+        st.info("👆 Upload file data original Bosch untuk memulai proses cleaning.")
+
+# ============================================================
+# CABANG: CLEANING BIASA
 # ============================================================
 else:
 
-    # ── Upload Master Kota (kondisional) ──
     kw_map = []
     if cfg["use_master_kota"]:
         st.markdown('<div class="step-label">📋 Step 1 — Master Kota</div>', unsafe_allow_html=True)
@@ -351,7 +455,6 @@ else:
         file_master = True
         st.info("ℹ️ Template ini tidak menggunakan Master Kota.")
 
-    # ── Upload Data Original ──
     st.markdown('<div class="step-label">📂 Step 2 — Data Original</div>', unsafe_allow_html=True)
     file_ori = st.file_uploader("Upload Data Original (.xlsx)", type=["xlsx"], key="original")
 
