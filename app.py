@@ -172,7 +172,7 @@ TEMPLATES = {
     "Penjualan Bosch PTRA": {
         "type": "bosch_ptra",
         "output_file": "PENJUALAN_BOSCH_PTRA.xlsx",
-        "use_master_kota": True,
+        "use_master_kota": False,
     },
 }
 
@@ -216,45 +216,30 @@ def build_ptra(df, kw_map):
     """Bangun df_clean untuk template Penjualan Bosch PTRA."""
     df_clean = pd.DataFrame()
 
-    df_clean['Tanggal']              = pd.to_datetime(df['Tanggal'], errors='coerce') if 'Tanggal' in df.columns else np.nan
-    df_clean['Nomor #']              = df['Nomor #'] if 'Nomor #' in df.columns else np.nan
-    df_clean['Pelanggan']            = df['Pelanggan'] if 'Pelanggan' in df.columns else np.nan
-    df_clean['Kode #']               = df['Kode #'] if 'Kode #' in df.columns else np.nan
-    df_clean['Nama Barang']          = df['Nama Barang'] if 'Nama Barang' in df.columns else np.nan
-    df_clean['Kuantitas']            = pd.to_numeric(df['Kuantitas'], errors='coerce') if 'Kuantitas' in df.columns else np.nan
-    df_clean['@Harga']               = pd.to_numeric(df['@Harga'], errors='coerce') if '@Harga' in df.columns else np.nan
-    df_clean['Total Harga']          = pd.to_numeric(df['Total Harga'], errors='coerce') if 'Total Harga' in df.columns else np.nan
-    df_clean['Nama Tenaga Penjual']  = df['Nama Tenaga Penjual'] if 'Nama Tenaga Penjual' in df.columns else np.nan
-    df_clean['Kategori']             = df.apply(
+    df_clean['Tanggal']             = pd.to_datetime(df['Tanggal'], errors='coerce') if 'Tanggal' in df.columns else np.nan
+    df_clean['Nomor #']             = df['Nomor #'] if 'Nomor #' in df.columns else np.nan
+    df_clean['Pelanggan']           = df['Pelanggan'] if 'Pelanggan' in df.columns else np.nan
+    df_clean['Kode #']              = df['Kode #'] if 'Kode #' in df.columns else np.nan
+    df_clean['Nama Barang']         = df['Nama Barang'] if 'Nama Barang' in df.columns else np.nan
+    df_clean['Kuantitas']           = pd.to_numeric(df['Kuantitas'], errors='coerce') if 'Kuantitas' in df.columns else np.nan
+    df_clean['@Harga']              = pd.to_numeric(df['@Harga'], errors='coerce') if '@Harga' in df.columns else np.nan
+    df_clean['Total Harga']         = pd.to_numeric(df['Total Harga'], errors='coerce') if 'Total Harga' in df.columns else np.nan
+    df_clean['Nama Tenaga Penjual'] = df['Nama Tenaga Penjual'] if 'Nama Tenaga Penjual' in df.columns else np.nan
+    df_clean['Kategori']            = df.apply(
         lambda row: map_bu(
             row['Divisi'] if 'Divisi' in df.columns else None,
             row['Nama Barang'] if 'Nama Barang' in df.columns else None
         ), axis=1
     )
 
-    # Kota dari master kota
-    if kw_map and 'Alamat Pengiriman Pesanan Detail Pengiriman Pesan' in df.columns:
-        def extract_kota(alamat):
-            if pd.isna(alamat):
-                return np.nan
-            alamat = str(alamat)
-            for keyword, hasil in kw_map:
-                pattern = r'\b' + re.escape(keyword) + r'\b'
-                if re.search(pattern, alamat, flags=re.IGNORECASE):
-                    return hasil
-            return np.nan
-        df_clean['Kota'] = df['Alamat Pengiriman Pesanan Detail Pengiriman Pesan'].apply(extract_kota)
-    else:
-        df_clean['Kota'] = np.nan
-
     # Trim kolom object
     for col in df_clean.select_dtypes(include='object').columns:
         df_clean[col] = df_clean[col].str.strip()
 
     # Pisah berdasarkan marketplace
-    mask_mp    = df_clean['Pelanggan'].apply(is_marketplace)
-    df_mp      = df_clean[mask_mp].reset_index(drop=True)
-    df_sales   = df_clean[~mask_mp].reset_index(drop=True)
+    mask_mp  = df_clean['Pelanggan'].apply(is_marketplace)
+    df_mp    = df_clean[mask_mp].reset_index(drop=True)
+    df_sales = df_clean[~mask_mp].reset_index(drop=True)
 
     return df_clean, df_mp, df_sales
 
@@ -328,7 +313,7 @@ with st.sidebar:
         st.write(f"📄 Output: `{cfg['output_file']}`")
         st.write("📋 Sheet: `MP` + `SALES`")
         st.write("🔧 Tipe: Penjualan Bosch PTRA")
-        st.write("🗺️ Master Kota: ✅")
+        st.write("🗺️ Master Kota: ❌")   # <-- ubah jadi ❌
         st.write("🏪 Pisah Marketplace: ✅")
         st.write("📦 Mapping Kategori: ✅")
     else:
@@ -503,30 +488,10 @@ elif cfg.get("type") == "bosch_sellout":
 # ============================================================
 elif cfg.get("type") == "bosch_ptra":
 
-    # Step 1 — Master Kota
-    st.markdown('<div class="step-label">📋 Step 1 — Master Kota</div>', unsafe_allow_html=True)
-    file_master = st.file_uploader("Upload Master Kota (.xlsx)", type=["xlsx"], key="ptra_master")
-
-    kw_map = []
-    if file_master:
-        df_master = pd.read_excel(file_master)
-        df_master.columns = df_master.columns.str.strip()
-        for col in ['Keyword', 'Hasil']:
-            if col not in df_master.columns:
-                st.error(f"❌ Kolom **'{col}'** tidak ditemukan di Master Kota!")
-                st.stop()
-        df_master = df_master.dropna(subset=['Keyword', 'Hasil'])
-        df_master['Keyword'] = df_master['Keyword'].astype(str).str.strip()
-        df_master['Hasil']   = df_master['Hasil'].astype(str).str.strip()
-        df_master = df_master.sort_values(by='Keyword', key=lambda x: x.str.len(), ascending=False)
-        kw_map = list(zip(df_master['Keyword'], df_master['Hasil']))
-        st.success(f"✅ Master kota loaded — {len(kw_map)} keyword")
-
-    # Step 2 — Data Original
-    st.markdown('<div class="step-label">📂 Step 2 — Data Original</div>', unsafe_allow_html=True)
+    st.markdown('<div class="step-label">📂 Step 1 — Data Original</div>', unsafe_allow_html=True)
     file_ori = st.file_uploader("Upload Data Original (.xlsx)", type=["xlsx"], key="ptra_ori")
 
-    if file_master and file_ori:
+    if file_ori:
         try:
             df = pd.read_excel(file_ori, header=0)
             df = df.loc[:, ~df.columns.str.startswith('Unnamed')]
@@ -536,16 +501,15 @@ elif cfg.get("type") == "bosch_ptra":
                 st.dataframe(df.head(10), use_container_width=True)
 
             with st.spinner("⚙️ Sedang memproses Penjualan Bosch PTRA..."):
-                df_clean, df_mp, df_sales = build_ptra(df, kw_map)
+                df_clean, df_mp, df_sales = build_ptra(df, [])  # kw_map kosong
 
             st.markdown("---")
             st.markdown("### 📊 Hasil Cleaning")
 
-            c1, c2, c3, c4 = st.columns(4)
+            c1, c2, c3 = st.columns(3)
             c1.markdown(f'<div class="stat-card" style="border-left-color:#2563eb"><div class="label">Total Data</div><div class="value" style="color:#2563eb">{len(df_clean):,}</div></div>', unsafe_allow_html=True)
             c2.markdown(f'<div class="stat-card" style="border-left-color:#7c3aed"><div class="label">Sheet MP</div><div class="value" style="color:#7c3aed">{len(df_mp):,}</div></div>', unsafe_allow_html=True)
             c3.markdown(f'<div class="stat-card" style="border-left-color:#16a34a"><div class="label">Sheet SALES</div><div class="value" style="color:#16a34a">{len(df_sales):,}</div></div>', unsafe_allow_html=True)
-            c4.markdown(f'<div class="stat-card" style="border-left-color:#ea580c"><div class="label">Kota Terisi</div><div class="value" style="color:#ea580c">{int(df_clean["Kota"].notna().sum()):,}</div></div>', unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
 
@@ -555,7 +519,6 @@ elif cfg.get("type") == "bosch_ptra":
             with tab2:
                 st.dataframe(df_sales.head(20), use_container_width=True)
 
-            # Export 1 file, 2 sheet
             def to_excel_ptra(df_mp, df_sales):
                 buf = BytesIO()
                 with pd.ExcelWriter(buf, engine='openpyxl') as w:
@@ -564,7 +527,7 @@ elif cfg.get("type") == "bosch_ptra":
                 return buf.getvalue()
 
             st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown('<div class="step-label">📥 Step 3 — Download Hasil</div>', unsafe_allow_html=True)
+            st.markdown('<div class="step-label">📥 Step 2 — Download Hasil</div>', unsafe_allow_html=True)
             st.download_button(
                 label=f"⬇️ Download {cfg['output_file']} (2 sheet: MP + SALES)",
                 data=to_excel_ptra(df_mp, df_sales),
@@ -577,7 +540,7 @@ elif cfg.get("type") == "bosch_ptra":
             st.error(f"❌ Error saat memproses: {e}")
             st.exception(e)
     else:
-        st.info("👆 Upload Master Kota dan Data Original untuk memulai.")
+        st.info("👆 Upload Data Original untuk memulai.")
 
 # ============================================================
 # CABANG: CLEANING BIASA
