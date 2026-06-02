@@ -19,7 +19,8 @@ TEMPLATES = {
         "tanggal_format": None,
         "clean_hp": True,
         "replace_nan_string": True,
-        "sales_filter": ["ARUM", "LUTHFIAH WARDAH"],
+        "sales_filter":  ["ARUM", "LUTHFIAH WARDAH"],
+        "sales_exclude": None,
         "kolom_map": {
             "Tanggal":                  "Tanggal",
             "Pelanggan":                "Pelanggan",
@@ -48,7 +49,8 @@ TEMPLATES = {
         "tanggal_format": None,
         "clean_hp": True,
         "replace_nan_string": True,
-        "sales_filter": None,
+        "sales_filter":  None,
+        "sales_exclude": ["ARUM", "LUTHFIAH WARDAH"],  # buang nama ini + cell kosong
         "kolom_map": {
             "Divisi":                   "Divisi",
             "Pelanggan":                "Pelanggan",
@@ -77,7 +79,8 @@ TEMPLATES = {
         "tanggal_format": None,
         "clean_hp": True,
         "replace_nan_string": True,
-        "sales_filter": None,
+        "sales_filter":  None,
+        "sales_exclude": ["ARUM", "LUTHFIAH WARDAH"],  # buang nama ini + cell kosong
         "kolom_map": {
             "Divisi":                                            "Divisi",
             "Pelanggan":                                         "Pelanggan",
@@ -108,7 +111,8 @@ TEMPLATES = {
         "tanggal_format": None,
         "clean_hp": False,
         "replace_nan_string": True,
-        "sales_filter": None,
+        "sales_filter":  None,
+        "sales_exclude": None,
         "kolom_map": {
             "Divisi":                   "Divisi",
             "Pelanggan":                "Pelanggan",
@@ -136,7 +140,8 @@ TEMPLATES = {
         "tanggal_format": None,
         "clean_hp": False,
         "replace_nan_string": False,
-        "sales_filter": None,
+        "sales_filter":  None,
+        "sales_exclude": None,
         "kolom_map": {
             "Tanggal":               "Tanggal",
             "Nomor #":               "Nomor #",
@@ -357,7 +362,9 @@ with st.sidebar:
         st.write(f"📱 Clean HP: {'✅' if cfg['clean_hp'] else '❌'}")
         st.write(f"🧹 Replace NaN string: {'✅' if cfg['replace_nan_string'] else '❌'}")
         if cfg.get("sales_filter"):
-            st.write(f"👤 Filter Sales: `{'`, `'.join(cfg['sales_filter'])}`")
+            st.write(f"👤 Filter Sales (hanya): `{'`, `'.join(cfg['sales_filter'])}`")
+        if cfg.get("sales_exclude"):
+            st.write(f"🚫 Exclude Sales: `{'`, `'.join(cfg['sales_exclude'])}` + kosong")
 
     st.divider()
 
@@ -720,13 +727,26 @@ else:
                         mask = df_clean[sku_col].astype(str).str.contains(pattern_sku, flags=re.IGNORECASE, na=False)
                         df_clean = df_clean[mask].reset_index(drop=True)
 
-                # ── Filter Sales ───────────────────────────────────────
+                # ── Filter Sales (hanya tampilkan nama tertentu) ───────
                 n_before_sales = len(df_clean)
                 if cfg.get("sales_filter") and "Nama Tenaga Penjual" in df_clean.columns:
                     allowed = [s.upper() for s in cfg["sales_filter"]]
                     mask_sales = df_clean["Nama Tenaga Penjual"].astype(str).str.strip().str.upper().isin(allowed)
                     df_clean = df_clean[mask_sales].reset_index(drop=True)
-                # ── End Filter Sales ───────────────────────────────────
+
+                # ── Exclude Sales (buang nama tertentu + cell kosong) ──
+                n_before_exclude = len(df_clean)
+                if cfg.get("sales_exclude") and "Nama Tenaga Penjual" in df_clean.columns:
+                    excluded = [s.upper() for s in cfg["sales_exclude"]]
+                    sales_col = df_clean["Nama Tenaga Penjual"].astype(str).str.strip()
+                    mask_exclude = (
+                        ~sales_col.str.upper().isin(excluded)   # bukan nama yang di-exclude
+                        & (sales_col != '')                      # bukan string kosong
+                        & (sales_col.str.upper() != 'NAN')      # bukan nan string
+                        & df_clean["Nama Tenaga Penjual"].notna()# bukan NaN asli
+                    )
+                    df_clean = df_clean[mask_exclude].reset_index(drop=True)
+                # ── End Filter/Exclude Sales ───────────────────────────
 
             if missing:
                 st.warning(f"⚠️ Kolom tidak ditemukan di file original (diisi NaN): `{'`, `'.join(missing)}`")
@@ -737,6 +757,8 @@ else:
             stats = [("Total Data", len(df_clean), "#2563eb")]
             if cfg.get("sales_filter"):
                 stats.append(("Dihapus (Sales Filter)", n_before_sales - len(df_clean), "#dc2626"))
+            if cfg.get("sales_exclude"):
+                stats.append(("Dihapus (Sales Exclude)", n_before_exclude - len(df_clean), "#dc2626"))
             if cfg["sku_filter"]:
                 stats.append(("Setelah Filter SKU", len(df_clean), "#7c3aed"))
                 stats.append(("Dihapus (SKU)", n_before - len(df_clean), "#dc2626"))
