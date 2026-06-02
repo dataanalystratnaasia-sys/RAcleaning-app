@@ -19,6 +19,7 @@ TEMPLATES = {
         "tanggal_format": None,
         "clean_hp": True,
         "replace_nan_string": True,
+        "sales_filter": ["ARUM", "LUTHFIAH WARDAH"],
         "kolom_map": {
             "Tanggal":                  "Tanggal",
             "Pelanggan":                "Pelanggan",
@@ -47,6 +48,7 @@ TEMPLATES = {
         "tanggal_format": None,
         "clean_hp": True,
         "replace_nan_string": True,
+        "sales_filter": None,
         "kolom_map": {
             "Divisi":                   "Divisi",
             "Pelanggan":                "Pelanggan",
@@ -75,6 +77,7 @@ TEMPLATES = {
         "tanggal_format": None,
         "clean_hp": True,
         "replace_nan_string": True,
+        "sales_filter": None,
         "kolom_map": {
             "Divisi":                                            "Divisi",
             "Pelanggan":                                         "Pelanggan",
@@ -105,6 +108,7 @@ TEMPLATES = {
         "tanggal_format": None,
         "clean_hp": False,
         "replace_nan_string": True,
+        "sales_filter": None,
         "kolom_map": {
             "Divisi":                   "Divisi",
             "Pelanggan":                "Pelanggan",
@@ -132,6 +136,7 @@ TEMPLATES = {
         "tanggal_format": None,
         "clean_hp": False,
         "replace_nan_string": False,
+        "sales_filter": None,
         "kolom_map": {
             "Tanggal":               "Tanggal",
             "Nomor #":               "Nomor #",
@@ -219,10 +224,8 @@ def map_bu(divisi_raw, nama_barang):
     else:
         return nama_barang
 
-def build_ptra(df, kw_map):
-    """Bangun df_clean untuk template Penjualan Bosch PTRA."""
+def build_ptra(df):
     df_clean = pd.DataFrame()
-
     df_clean['Tanggal']             = pd.to_datetime(df['Tanggal'], errors='coerce') if 'Tanggal' in df.columns else np.nan
     df_clean['Nomor #']             = df['Nomor #'] if 'Nomor #' in df.columns else np.nan
     df_clean['Pelanggan']           = df['Pelanggan'] if 'Pelanggan' in df.columns else np.nan
@@ -238,101 +241,33 @@ def build_ptra(df, kw_map):
             row['Nama Barang'] if 'Nama Barang' in df.columns else None
         ), axis=1
     )
-
-    # Trim kolom object
     for col in df_clean.select_dtypes(include='object').columns:
         df_clean[col] = df_clean[col].str.strip()
-
-    # Pisah berdasarkan marketplace
     mask_mp  = df_clean['Pelanggan'].apply(is_marketplace)
     df_mp    = df_clean[mask_mp].reset_index(drop=True)
     df_sales = df_clean[~mask_mp].reset_index(drop=True)
-
     return df_clean, df_mp, df_sales
 
 def build_bosch_marketplace(df):
-    """
-    Cleaning Penjualan Marketplace Bosch
-    Hanya mengambil pelanggan:
-    Shopee, TikTok, Lazada, Blibli, Tokopedia
-    """
-
-    marketplace_keywords = [
-        'shopee',
-        'tiktok',
-        'tik tok',
-        'lazada',
-        'blibli',
-        'tokopedia'
-    ]
-
+    marketplace_keywords = ['shopee', 'tiktok', 'tik tok', 'lazada', 'blibli', 'tokopedia']
     pattern = '|'.join(marketplace_keywords)
-
     if 'Pelanggan' in df.columns:
-        df = df[
-            df['Pelanggan']
-            .astype(str)
-            .str.contains(pattern, case=False, na=False)
-        ].copy()
-
+        df = df[df['Pelanggan'].astype(str).str.contains(pattern, case=False, na=False)].copy()
     df_clean = pd.DataFrame()
-
-    df_clean['Tanggal']      = pd.to_datetime(
-        df['Tanggal'],
-        errors='coerce'
-    ) if 'Tanggal' in df.columns else np.nan
-
-    df_clean['Nomor #']      = df['Nomor #'] if 'Nomor #' in df.columns else np.nan
-    df_clean['Pelanggan']    = df['Pelanggan'] if 'Pelanggan' in df.columns else np.nan
-    df_clean['Kode #']       = df['Kode #'] if 'Kode #' in df.columns else np.nan
-    df_clean['Nama Barang']  = df['Nama Barang'] if 'Nama Barang' in df.columns else np.nan
-
-    df_clean['QTY'] = pd.to_numeric(
-        df['Kuantitas'],
-        errors='coerce'
-    ) if 'Kuantitas' in df.columns else np.nan
-
-    df_clean['@Harga'] = pd.to_numeric(
-        df['@Harga'],
-        errors='coerce'
-    ) if '@Harga' in df.columns else np.nan
-
-    df_clean['Total Harga'] = pd.to_numeric(
-        df['Total Harga'],
-        errors='coerce'
-    ) if 'Total Harga' in df.columns else np.nan
-
-    df_clean['Laba'] = pd.to_numeric(
-        df['Laba'],
-        errors='coerce'
-    ) if 'Laba' in df.columns else np.nan
-
-    df_clean['Gross Profit/Item'] = (
-        df_clean['Laba'] /
-        df_clean['QTY'].replace(0, np.nan)
-    )
-
-    # trim text
+    df_clean['Tanggal']     = pd.to_datetime(df['Tanggal'], errors='coerce') if 'Tanggal' in df.columns else np.nan
+    df_clean['Nomor #']     = df['Nomor #'] if 'Nomor #' in df.columns else np.nan
+    df_clean['Pelanggan']   = df['Pelanggan'] if 'Pelanggan' in df.columns else np.nan
+    df_clean['Kode #']      = df['Kode #'] if 'Kode #' in df.columns else np.nan
+    df_clean['Nama Barang'] = df['Nama Barang'] if 'Nama Barang' in df.columns else np.nan
+    df_clean['QTY']         = pd.to_numeric(df['Kuantitas'], errors='coerce') if 'Kuantitas' in df.columns else np.nan
+    df_clean['@Harga']      = pd.to_numeric(df['@Harga'], errors='coerce') if '@Harga' in df.columns else np.nan
+    df_clean['Total Harga'] = pd.to_numeric(df['Total Harga'], errors='coerce') if 'Total Harga' in df.columns else np.nan
+    df_clean['Laba']        = pd.to_numeric(df['Laba'], errors='coerce') if 'Laba' in df.columns else np.nan
+    df_clean['Gross Profit/Item'] = df_clean['Laba'] / df_clean['QTY'].replace(0, np.nan)
     for col in df_clean.select_dtypes(include='object').columns:
         df_clean[col] = df_clean[col].astype(str).str.strip()
-
-    # hapus data invalid
-    mandatory_cols = [
-        'Tanggal',
-        'Nomor #',
-        'Kode #',
-        'Nama Barang'
-    ]
-
-    mandatory_cols = [
-        col for col in mandatory_cols
-        if col in df_clean.columns
-    ]
-
-    df_clean = df_clean.dropna(
-        subset=mandatory_cols
-    ).reset_index(drop=True)
-
+    mandatory_cols = [c for c in ['Tanggal', 'Nomor #', 'Kode #', 'Nama Barang'] if c in df_clean.columns]
+    df_clean = df_clean.dropna(subset=mandatory_cols).reset_index(drop=True)
     return df_clean
 
 # ============================================================
@@ -405,7 +340,7 @@ with st.sidebar:
         st.write(f"📄 Output: `{cfg['output_file']}`")
         st.write("📋 Sheet: `MP` + `SALES`")
         st.write("🔧 Tipe: Penjualan Bosch PTRA")
-        st.write("🗺️ Master Kota: ❌")   # <-- ubah jadi ❌
+        st.write("🗺️ Master Kota: ❌")
         st.write("🏪 Pisah Marketplace: ✅")
         st.write("📦 Mapping Kategori: ✅")
     elif cfg.get("type") == "bosch_marketplace":
@@ -421,6 +356,8 @@ with st.sidebar:
         st.write(f"🔍 Filter SKU: {'✅' if cfg['sku_filter'] else '❌'}")
         st.write(f"📱 Clean HP: {'✅' if cfg['clean_hp'] else '❌'}")
         st.write(f"🧹 Replace NaN string: {'✅' if cfg['replace_nan_string'] else '❌'}")
+        if cfg.get("sales_filter"):
+            st.write(f"👤 Filter Sales: `{'`, `'.join(cfg['sales_filter'])}`")
 
     st.divider()
 
@@ -599,18 +536,16 @@ elif cfg.get("type") == "bosch_ptra":
                 st.dataframe(df.head(10), use_container_width=True)
 
             with st.spinner("⚙️ Sedang memproses Penjualan Bosch PTRA..."):
-                df_clean, df_mp, df_sales = build_ptra(df, [])  # kw_map kosong
+                df_clean, df_mp, df_sales = build_ptra(df)
 
             st.markdown("---")
             st.markdown("### 📊 Hasil Cleaning")
-
             c1, c2, c3 = st.columns(3)
             c1.markdown(f'<div class="stat-card" style="border-left-color:#2563eb"><div class="label">Total Data</div><div class="value" style="color:#2563eb">{len(df_clean):,}</div></div>', unsafe_allow_html=True)
             c2.markdown(f'<div class="stat-card" style="border-left-color:#7c3aed"><div class="label">Sheet MP</div><div class="value" style="color:#7c3aed">{len(df_mp):,}</div></div>', unsafe_allow_html=True)
             c3.markdown(f'<div class="stat-card" style="border-left-color:#16a34a"><div class="label">Sheet SALES</div><div class="value" style="color:#16a34a">{len(df_sales):,}</div></div>', unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
-
             tab1, tab2 = st.tabs(["🏪 Sheet MP (Marketplace)", "🧑‍💼 Sheet SALES"])
             with tab1:
                 st.dataframe(df_mp.head(20), use_container_width=True)
@@ -641,118 +576,44 @@ elif cfg.get("type") == "bosch_ptra":
         st.info("👆 Upload Data Original untuk memulai.")
 
 # ============================================================
-# CABANG: PENJUALAN MARKETPLACE BOSCH
+# CABANG: KUADRAN MARKETPLACE
 # ============================================================
 elif cfg.get("type") == "bosch_marketplace":
 
-    st.markdown(
-        '<div class="step-label">📂 Step 1 — Data Original</div>',
-        unsafe_allow_html=True
-    )
-
-    file_ori = st.file_uploader(
-        "Upload Data Original (.xlsx)",
-        type=["xlsx"],
-        key="bosch_marketplace"
-    )
+    st.markdown('<div class="step-label">📂 Step 1 — Data Original</div>', unsafe_allow_html=True)
+    file_ori = st.file_uploader("Upload Data Original (.xlsx)", type=["xlsx"], key="bosch_marketplace")
 
     if file_ori:
-
         try:
-
             df = pd.read_excel(file_ori)
-
-            df = df.loc[
-                :,
-                ~df.columns.astype(str).str.startswith('Unnamed')
-            ]
-
+            df = df.loc[:, ~df.columns.astype(str).str.startswith('Unnamed')]
             df.columns = df.columns.str.strip()
 
-            with st.expander(
-                "👁️ Preview Data Original",
-                expanded=False
-            ):
-                st.dataframe(
-                    df.head(10),
-                    use_container_width=True
-                )
+            with st.expander("👁️ Preview Data Original", expanded=False):
+                st.dataframe(df.head(10), use_container_width=True)
 
-            with st.spinner(
-                "⚙️ Sedang memproses data marketplace..."
-            ):
+            with st.spinner("⚙️ Sedang memproses data marketplace..."):
                 df_clean = build_bosch_marketplace(df)
 
             st.markdown("---")
             st.markdown("### 📊 Hasil Cleaning")
-
             c1, c2, c3, c4 = st.columns(4)
-
-            c1.markdown(
-                f'''
-                <div class="stat-card">
-                    <div class="label">Total Data</div>
-                    <div class="value">{len(df_clean):,}</div>
-                </div>
-                ''',
-                unsafe_allow_html=True
-            )
-
-            c2.markdown(
-                f'''
-                <div class="stat-card">
-                    <div class="label">Nota Unik</div>
-                    <div class="value">{df_clean["Nomor #"].nunique():,}</div>
-                </div>
-                ''',
-                unsafe_allow_html=True
-            )
-
-            c3.markdown(
-                f'''
-                <div class="stat-card">
-                    <div class="label">Pelanggan Unik</div>
-                    <div class="value">{df_clean["Pelanggan"].nunique():,}</div>
-                </div>
-                ''',
-                unsafe_allow_html=True
-            )
-
-            c4.markdown(
-                f'''
-                <div class="stat-card">
-                    <div class="label">SKU Unik</div>
-                    <div class="value">{df_clean["Kode #"].nunique():,}</div>
-                </div>
-                ''',
-                unsafe_allow_html=True
-            )
+            c1.markdown(f'<div class="stat-card" style="border-left-color:#2563eb"><div class="label">Total Data</div><div class="value" style="color:#2563eb">{len(df_clean):,}</div></div>', unsafe_allow_html=True)
+            c2.markdown(f'<div class="stat-card" style="border-left-color:#7c3aed"><div class="label">Nota Unik</div><div class="value" style="color:#7c3aed">{df_clean["Nomor #"].nunique():,}</div></div>', unsafe_allow_html=True)
+            c3.markdown(f'<div class="stat-card" style="border-left-color:#16a34a"><div class="label">Pelanggan Unik</div><div class="value" style="color:#16a34a">{df_clean["Pelanggan"].nunique():,}</div></div>', unsafe_allow_html=True)
+            c4.markdown(f'<div class="stat-card" style="border-left-color:#ea580c"><div class="label">SKU Unik</div><div class="value" style="color:#ea580c">{df_clean["Kode #"].nunique():,}</div></div>', unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
-
-            st.dataframe(
-                df_clean.head(20),
-                use_container_width=True
-            )
+            st.dataframe(df_clean.head(20), use_container_width=True)
 
             def to_excel_marketplace(df):
                 buf = BytesIO()
-
-                with pd.ExcelWriter(
-                    buf,
-                    engine='openpyxl'
-                ) as writer:
-
-                    df.to_excel(
-                        writer,
-                        index=False,
-                        sheet_name=cfg["sheet_name"]
-                    )
-
+                with pd.ExcelWriter(buf, engine='openpyxl') as w:
+                    df.to_excel(w, index=False, sheet_name=cfg["sheet_name"])
                 return buf.getvalue()
 
             st.markdown("<br>", unsafe_allow_html=True)
-
+            st.markdown('<div class="step-label">📥 Step 2 — Download Hasil</div>', unsafe_allow_html=True)
             st.download_button(
                 label=f"⬇️ Download {cfg['output_file']}",
                 data=to_excel_marketplace(df_clean),
@@ -764,11 +625,8 @@ elif cfg.get("type") == "bosch_marketplace":
         except Exception as e:
             st.error(f"❌ Error saat memproses: {e}")
             st.exception(e)
-
     else:
-        st.info(
-            "👆 Upload Data Original untuk memulai proses cleaning."
-        )
+        st.info("👆 Upload Data Original untuk memulai proses cleaning.")
 
 # ============================================================
 # CABANG: CLEANING BIASA
@@ -862,6 +720,14 @@ else:
                         mask = df_clean[sku_col].astype(str).str.contains(pattern_sku, flags=re.IGNORECASE, na=False)
                         df_clean = df_clean[mask].reset_index(drop=True)
 
+                # ── Filter Sales ───────────────────────────────────────
+                n_before_sales = len(df_clean)
+                if cfg.get("sales_filter") and "Nama Tenaga Penjual" in df_clean.columns:
+                    allowed = [s.upper() for s in cfg["sales_filter"]]
+                    mask_sales = df_clean["Nama Tenaga Penjual"].astype(str).str.strip().str.upper().isin(allowed)
+                    df_clean = df_clean[mask_sales].reset_index(drop=True)
+                # ── End Filter Sales ───────────────────────────────────
+
             if missing:
                 st.warning(f"⚠️ Kolom tidak ditemukan di file original (diisi NaN): `{'`, `'.join(missing)}`")
 
@@ -869,6 +735,8 @@ else:
             st.markdown("### 📊 Hasil Cleaning")
 
             stats = [("Total Data", len(df_clean), "#2563eb")]
+            if cfg.get("sales_filter"):
+                stats.append(("Dihapus (Sales Filter)", n_before_sales - len(df_clean), "#dc2626"))
             if cfg["sku_filter"]:
                 stats.append(("Setelah Filter SKU", len(df_clean), "#7c3aed"))
                 stats.append(("Dihapus (SKU)", n_before - len(df_clean), "#dc2626"))
