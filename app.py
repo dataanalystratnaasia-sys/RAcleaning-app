@@ -50,7 +50,10 @@ TEMPLATES = {
         "clean_hp": True,
         "replace_nan_string": True,
         "sales_filter":  None,
-        "sales_exclude": ["ARUM", "LUTHFIAH WARDAH"],  # buang nama ini + cell kosong
+        "sales_exclude": ["ARUM", "LUTHFIAH WARDAH"],
+        # Urutan kolom: Divisi Pelanggan Tanggal Kode# NamaBarang Kuantitas TotalHarga
+        #               NamaTenagaPenjual NamakategoriPelanggan Kota Handphone
+        #               NamaMerekBarang NamaKategoriBarang
         "kolom_map": {
             "Divisi":                   "Divisi",
             "Pelanggan":                "Pelanggan",
@@ -61,14 +64,16 @@ TEMPLATES = {
             "Total Harga":              "Total Harga",
             "Nama Tenaga Penjual":      "Nama Tenaga Penjual",
             "Nama Kategori Pelanggan":  "Nama Kategori Pelanggan Pesanan Penjualan",
+            # Kota disisipkan di sini via kolom_kota_after
             "Handphone":                "Handphone Kontak Utama Pelanggan Pesanan Penjuala",
             "Nama Merek Barang":        "Nama Merek Barang Barang & Jasa",
             "Nama Kategori Barang":     "Nama Kategori Barang Barang & Jasa",
         },
-        "kolom_alamat":  "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
-        "kolom_hp":      "Handphone",
-        "kolom_numeric": ["Kuantitas", "Total Harga"],
-        "kolom_tanggal": ["Tanggal"],
+        "kolom_alamat":     "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
+        "kolom_kota_after": "Nama Kategori Pelanggan",   # sisipkan Kota setelah kolom ini
+        "kolom_hp":         "Handphone",
+        "kolom_numeric":    ["Kuantitas", "Total Harga"],
+        "kolom_tanggal":    ["Tanggal"],
     },
 
     "Monitoring Pelanggan | Sales Offline (Data2026)": {
@@ -80,7 +85,11 @@ TEMPLATES = {
         "clean_hp": True,
         "replace_nan_string": True,
         "sales_filter":  None,
-        "sales_exclude": ["ARUM", "LUTHFIAH WARDAH"],  # buang nama ini + cell kosong
+        "sales_exclude": ["ARUM", "LUTHFIAH WARDAH"],
+        # Urutan kolom: Divisi Pelanggan Tanggal Kode# NamaBarang Kuantitas TotalHarga
+        #               NamaTenagaPenjual NamaKategoriPelanggan Kota Handphone
+        #               AlamatPengiriman AlamatPengirimanDetail
+        #               NamaMerekBarang NamaKategoriBarang
         "kolom_map": {
             "Divisi":                                            "Divisi",
             "Pelanggan":                                         "Pelanggan",
@@ -91,16 +100,18 @@ TEMPLATES = {
             "Total Harga":                                       "Total Harga",
             "Nama Tenaga Penjual":                               "Nama Tenaga Penjual",
             "Nama Kategori Pelanggan":                           "Nama Kategori Pelanggan Pesanan Penjualan",
+            # Kota disisipkan di sini via kolom_kota_after
             "Handphone":                                         "Handphone Kontak Utama Pelanggan Pesanan Penjuala",
             "Alamat Pengiriman Pesanan":                         "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
             "Alamat Pengiriman Pesanan Detail Pengiriman Pesan": "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
             "Nama Merek Barang":                                 "Nama Merek Barang Barang & Jasa",
             "Nama Kategori Barang":                              "Nama Kategori Barang Barang & Jasa",
         },
-        "kolom_alamat":  "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
-        "kolom_hp":      "Handphone",
-        "kolom_numeric": ["Kuantitas", "Total Harga"],
-        "kolom_tanggal": ["Tanggal"],
+        "kolom_alamat":     "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
+        "kolom_kota_after": "Nama Kategori Pelanggan",   # sisipkan Kota setelah kolom ini
+        "kolom_hp":         "Handphone",
+        "kolom_numeric":    ["Kuantitas", "Total Harga"],
+        "kolom_tanggal":    ["Tanggal"],
     },
 
     "Data Pelanggan 2026 | Sales Offline": {
@@ -275,6 +286,16 @@ def build_bosch_marketplace(df):
     df_clean = df_clean.dropna(subset=mandatory_cols).reset_index(drop=True)
     return df_clean
 
+def insert_kota_after(df, after_col, kota_series):
+    """Sisipkan kolom Kota tepat setelah kolom after_col."""
+    if after_col not in df.columns:
+        df['Kota'] = kota_series
+        return df
+    cols = list(df.columns)
+    idx  = cols.index(after_col) + 1
+    df.insert(idx, 'Kota', kota_series)
+    return df
+
 # ============================================================
 # STYLING
 # ============================================================
@@ -425,7 +446,7 @@ if cfg.get("type") == "merge_sku":
             def to_excel(df, sheet):
                 buf = BytesIO()
                 with pd.ExcelWriter(buf, engine='openpyxl') as w:
-                    df.to_excel(w, index=False, sheet_name=sheet)
+                    df.to_excel(w, index=False, sheet_name=sheet, merge_cells=False)
                 return buf.getvalue()
 
             st.markdown("<br>", unsafe_allow_html=True)
@@ -506,7 +527,7 @@ elif cfg.get("type") == "bosch_sellout":
             def to_excel_single(df, sheet):
                 buf = BytesIO()
                 with pd.ExcelWriter(buf, engine='openpyxl') as w:
-                    df.to_excel(w, index=False, sheet_name=sheet)
+                    df.to_excel(w, index=False, sheet_name=sheet, merge_cells=False)
                 return buf.getvalue()
 
             st.markdown("<br>", unsafe_allow_html=True)
@@ -563,7 +584,7 @@ elif cfg.get("type") == "bosch_ptra":
                 buf = BytesIO()
                 with pd.ExcelWriter(buf, engine='openpyxl') as w:
                     df_mp.to_excel(w, index=False, sheet_name='MP')
-                    df_sales.to_excel(w, index=False, sheet_name='SALES')
+                    df_sales.to_excel(w, index=False, sheet_name='SALES', merge_cells=False)
                 return buf.getvalue()
 
             st.markdown("<br>", unsafe_allow_html=True)
@@ -616,7 +637,7 @@ elif cfg.get("type") == "bosch_marketplace":
             def to_excel_marketplace(df):
                 buf = BytesIO()
                 with pd.ExcelWriter(buf, engine='openpyxl') as w:
-                    df.to_excel(w, index=False, sheet_name=cfg["sheet_name"])
+                    df.to_excel(w, index=False, sheet_name=cfg["sheet_name"], merge_cells=False)
                 return buf.getvalue()
 
             st.markdown("<br>", unsafe_allow_html=True)
@@ -692,11 +713,21 @@ else:
                         df_clean[out_col] = np.nan
                         missing.append(in_col)
 
+                # ── Kota: sisipkan di posisi yang tepat ───────────────
                 if cfg["kolom_alamat"] and cfg["use_master_kota"]:
-                    if cfg["kolom_alamat"] in df.columns:
-                        df_clean["Kota"] = df[cfg["kolom_alamat"]].apply(extract_kota)
+                    kota_series = (
+                        df[cfg["kolom_alamat"]].apply(extract_kota)
+                        if cfg["kolom_alamat"] in df.columns
+                        else pd.Series(np.nan, index=df_clean.index)
+                    )
+                    after_col = cfg.get("kolom_kota_after")
+                    if after_col and after_col in df_clean.columns:
+                        # sisipkan tepat setelah kolom yang ditentukan
+                        df_clean = insert_kota_after(df_clean, after_col, kota_series)
                     else:
-                        df_clean["Kota"] = np.nan
+                        # fallback: tambah di akhir
+                        df_clean["Kota"] = kota_series
+                # ── End Kota ──────────────────────────────────────────
 
                 for col in df_clean.select_dtypes(include='object').columns:
                     df_clean[col] = df_clean[col].str.strip()
@@ -737,13 +768,13 @@ else:
                 # ── Exclude Sales (buang nama tertentu + cell kosong) ──
                 n_before_exclude = len(df_clean)
                 if cfg.get("sales_exclude") and "Nama Tenaga Penjual" in df_clean.columns:
-                    excluded = [s.upper() for s in cfg["sales_exclude"]]
+                    excluded  = [s.upper() for s in cfg["sales_exclude"]]
                     sales_col = df_clean["Nama Tenaga Penjual"].astype(str).str.strip()
                     mask_exclude = (
-                        ~sales_col.str.upper().isin(excluded)   # bukan nama yang di-exclude
-                        & (sales_col != '')                      # bukan string kosong
-                        & (sales_col.str.upper() != 'NAN')      # bukan nan string
-                        & df_clean["Nama Tenaga Penjual"].notna()# bukan NaN asli
+                        ~sales_col.str.upper().isin(excluded)
+                        & (sales_col != '')
+                        & (sales_col.str.upper() != 'NAN')
+                        & df_clean["Nama Tenaga Penjual"].notna()
                     )
                     df_clean = df_clean[mask_exclude].reset_index(drop=True)
                 # ── End Filter/Exclude Sales ───────────────────────────
@@ -780,7 +811,7 @@ else:
             def to_excel(df, sheet):
                 buf = BytesIO()
                 with pd.ExcelWriter(buf, engine='openpyxl') as w:
-                    df.to_excel(w, index=False, sheet_name=sheet)
+                    df.to_excel(w, index=False, sheet_name=sheet, merge_cells=False)
                 return buf.getvalue()
 
             st.markdown("<br>", unsafe_allow_html=True)
