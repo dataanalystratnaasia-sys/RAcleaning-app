@@ -154,25 +154,25 @@ TEMPLATES = {
         "sales_filter":  None,
         "sales_exclude": None,
         "kolom_map": {
-            "Tanggal":               "Tanggal",
-            "Nomor #":               "Nomor #",
-            "Kode #":                "Kode #",
-            "Nama Barang":           "Nama Barang",
-            "Divisi":                "Divisi",
-            "Brand":                 "Nama Merek Barang Barang & Jasa",
-            "Nama Kategori Barang":  "Nama Kategori Barang Barang & Jasa",
-            "QTY":                   "Kuantitas",
-            "Total Harga":           "Total Harga",
-            "Sales":                 "Nama Tenaga Penjual",
-            "Pelanggan":             "Pelanggan",
-            "Kategori Pelanggan":    "Nama Kategori Pelanggan Pesanan Penjualan",
-            "Handphone":             "Handphone Kontak Utama Pelanggan Pesanan Penjuala",
-            "Alamat Pengiriman":     "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
+            "Tanggal":                                       "Tanggal",
+            "Nomor #":                                       "Nomor #",
+            "Nama Barang":                                   "Nama Barang",
+            "Kode #":                                        "Kode #",
+            "Divisi":                                        "Divisi",
+            "Brand":                                         "Nama Merek Barang Barang & Jasa",
+            "Nama Kategori Barang Barang & Jasa":            "Nama Kategori Barang Barang & Jasa",
+            "QTY":                                           "Kuantitas",
+            "Total Harga":                                   "Total Harga",
+            "Pelanggan":                                     "Pelanggan",
+            "Nama Kategori Pelanggan Pesanan Penjualan":     "Nama Kategori Pelanggan Pesanan Penjualan",
+            "Alamat Pengiriman Pesanan Detail Pengiriman Pesan": "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
         },
-        "kolom_alamat":  "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
-        "kolom_hp":      None,
-        "kolom_numeric": ["QTY", "Total Harga"],
-        "kolom_tanggal": ["Tanggal"],
+        "kolom_alamat":     "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
+        "kolom_kota_after": "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",  # Kota di akhir
+        "kolom_hp":         None,
+        "kolom_numeric":    ["QTY", "Total Harga"],
+        "kolom_tanggal":    ["Tanggal"],
+        "kota_upper":       True,   # flag untuk kapital
     },
 
     "Filter SKU Diskon (Bu Dhany)": {
@@ -722,11 +722,16 @@ else:
                     )
                     after_col = cfg.get("kolom_kota_after")
                     if after_col and after_col in df_clean.columns:
-                        # sisipkan tepat setelah kolom yang ditentukan
                         df_clean = insert_kota_after(df_clean, after_col, kota_series)
                     else:
-                        # fallback: tambah di akhir
                         df_clean["Kota"] = kota_series
+
+                # ── Kota kapital jika diminta ──────────────────────────
+                if cfg.get("kota_upper") and "Kota" in df_clean.columns:
+                    df_clean["Kota"] = df_clean["Kota"].where(
+                        df_clean["Kota"].isna(),
+                        df_clean["Kota"].astype(str).str.upper()
+                    )
                 # ── End Kota ──────────────────────────────────────────
 
                 for col in df_clean.select_dtypes(include='object').columns:
