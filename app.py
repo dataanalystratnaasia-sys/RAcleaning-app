@@ -140,6 +140,7 @@ TEMPLATES = {
         "kolom_numeric":    ["Kuantitas", "Total Harga"],
         "kolom_tanggal":    ["Tanggal"],
     },
+    
     "Master Dashboard All Sales": {
         "output_file": "MASTER_DASHBOARD_ALL_SALES.xlsx",
         "sheet_name": "Master Dashboard",
@@ -169,7 +170,7 @@ TEMPLATES = {
         "kolom_hp":         None,
         "kolom_numeric":    ["QTY", "Total Harga"],
         "kolom_tanggal":    ["Tanggal"],
-        "kota_upper":       True,   # flag untuk kapital
+        "kota_upper":       False,   # flag untuk kapital
     },
 
     "Filter SKU Diskon (Bu Dhany)": {
