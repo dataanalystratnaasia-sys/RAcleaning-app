@@ -33,15 +33,16 @@ TEMPLATES = {
             "Nama Kategori Barang":     "Nama Kategori Barang Barang & Jasa",
             "Nama Tenaga Penjual":      "Nama Tenaga Penjual",
             "Nama Kategori Pelanggan":  "Nama Kategori Pelanggan Pesanan Penjualan",
-            # Kota disisipkan setelah Nama Kategori Pelanggan via kolom_kota_after
             "Handphone":                "Handphone Kontak Utama Pelanggan Pesanan Penjuala",
         },
         "kolom_alamat":     "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
-        "kolom_kota_after": "Nama Kategori Pelanggan",  # Kota sisip di sini, Handphone setelahnya
+        "kolom_kota_after": "Nama Kategori Pelanggan",
+        "kota_upper":       True,
         "kolom_hp":         "Handphone",
         "kolom_numeric":    ["Kuantitas", "Total Harga"],
         "kolom_tanggal":    ["Tanggal"],
     },
+    
     "Monitoring Pelanggan | Sales Offline (PerBulan)": {
         "output_file": "CLEANING_MONITORING_PELANGGAN_PerBulan.xlsx",
         "sheet_name": "Monitoring Pelanggan",
@@ -52,9 +53,6 @@ TEMPLATES = {
         "replace_nan_string": True,
         "sales_filter":  None,
         "sales_exclude": ["ARUM", "LUTHFIAH WARDAH"],
-        # Urutan kolom: Divisi Pelanggan Tanggal Kode# NamaBarang Kuantitas TotalHarga
-        #               NamaTenagaPenjual NamakategoriPelanggan Kota Handphone
-        #               NamaMerekBarang NamaKategoriBarang
         "kolom_map": {
             "Divisi":                   "Divisi",
             "Pelanggan":                "Pelanggan",
@@ -65,18 +63,18 @@ TEMPLATES = {
             "Total Harga":              "Total Harga",
             "Nama Tenaga Penjual":      "Nama Tenaga Penjual",
             "Nama Kategori Pelanggan":  "Nama Kategori Pelanggan Pesanan Penjualan",
-            # Kota disisipkan di sini via kolom_kota_after
             "Handphone":                "Handphone Kontak Utama Pelanggan Pesanan Penjuala",
             "Nama Merek Barang":        "Nama Merek Barang Barang & Jasa",
             "Nama Kategori Barang":     "Nama Kategori Barang Barang & Jasa",
         },
         "kolom_alamat":     "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
-        "kolom_kota_after": "Nama Kategori Pelanggan",   # sisipkan Kota setelah kolom ini
+        "kolom_kota_after": "Nama Kategori Pelanggan",
+        "kota_upper":       True,
         "kolom_hp":         "Handphone",
         "kolom_numeric":    ["Kuantitas", "Total Harga"],
         "kolom_tanggal":    ["Tanggal"],
     },
-
+    
     "Monitoring Pelanggan | Sales Offline (Data2026)": {
         "output_file": "CLEANING_MONITORING_PELANGGAN_Data2026.xlsx",
         "sheet_name": "Monitoring Pelanggan 2026",
@@ -87,10 +85,6 @@ TEMPLATES = {
         "replace_nan_string": True,
         "sales_filter":  None,
         "sales_exclude": ["ARUM", "LUTHFIAH WARDAH"],
-        # Urutan kolom: Divisi Pelanggan Tanggal Kode# NamaBarang Kuantitas TotalHarga
-        #               NamaTenagaPenjual NamaKategoriPelanggan Kota Handphone
-        #               AlamatPengiriman AlamatPengirimanDetail
-        #               NamaMerekBarang NamaKategoriBarang
         "kolom_map": {
             "Divisi":                                            "Divisi",
             "Pelanggan":                                         "Pelanggan",
@@ -101,7 +95,6 @@ TEMPLATES = {
             "Total Harga":                                       "Total Harga",
             "Nama Tenaga Penjual":                               "Nama Tenaga Penjual",
             "Nama Kategori Pelanggan":                           "Nama Kategori Pelanggan Pesanan Penjualan",
-            # Kota disisipkan di sini via kolom_kota_after
             "Handphone":                                         "Handphone Kontak Utama Pelanggan Pesanan Penjuala",
             "Alamat Pengiriman Pesanan":                         "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
             "Alamat Pengiriman Pesanan Detail Pengiriman Pesan": "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
@@ -109,12 +102,13 @@ TEMPLATES = {
             "Nama Kategori Barang":                              "Nama Kategori Barang Barang & Jasa",
         },
         "kolom_alamat":     "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
-        "kolom_kota_after": "Nama Kategori Pelanggan",   # sisipkan Kota setelah kolom ini
+        "kolom_kota_after": "Nama Kategori Pelanggan",
+        "kota_upper":       True,
         "kolom_hp":         "Handphone",
         "kolom_numeric":    ["Kuantitas", "Total Harga"],
         "kolom_tanggal":    ["Tanggal"],
     },
-
+    
     "Data Pelanggan 2026 | Sales Offline": {
         "output_file": "CLEANING_DATA_PELANGGAN_2026_OFFLINE.xlsx",
         "sheet_name": "Data Pelanggan 2026",
@@ -135,15 +129,17 @@ TEMPLATES = {
             "Total Harga":              "Total Harga",
             "Nama Tenaga Penjual":      "Nama Tenaga Penjual",
             "Nama Kategori Pelanggan":  "Nama Kategori Pelanggan Pesanan Penjualan",
+            # Kota disisipkan setelah Nama Kategori Pelanggan
             "Nama Merek Barang":        "Nama Merek Barang Barang & Jasa",
             "Nama Kategori Barang":     "Nama Kategori Barang Barang & Jasa",
         },
-        "kolom_alamat":  "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
-        "kolom_hp":      None,
-        "kolom_numeric": ["Kuantitas", "Total Harga"],
-        "kolom_tanggal": ["Tanggal"],
+        "kolom_alamat":     "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
+        "kolom_kota_after": "Nama Kategori Pelanggan",
+        "kota_upper":       True,
+        "kolom_hp":         None,
+        "kolom_numeric":    ["Kuantitas", "Total Harga"],
+        "kolom_tanggal":    ["Tanggal"],
     },
-
     "Master Dashboard All Sales": {
         "output_file": "MASTER_DASHBOARD_ALL_SALES.xlsx",
         "sheet_name": "Master Dashboard",
@@ -729,10 +725,16 @@ else:
 
                 # ── Kota kapital jika diminta ──────────────────────────
                 if cfg.get("kota_upper") and "Kota" in df_clean.columns:
-                    df_clean["Kota"] = df_clean["Kota"].where(
-                        df_clean["Kota"].isna(),
-                        df_clean["Kota"].astype(str).str.upper()
-                    )
+                    def clean_kota(val):
+                        if pd.isna(val):
+                            return val
+                        s = str(val).upper().strip()
+                        # buang prefix KOTA dan KAB. beserta spasi setelahnya
+                        s = re.sub(r'^KOTA\s+', '', s)
+                        s = re.sub(r'^KAB\.\s*', '', s)
+                        s = re.sub(r'^KABUPATEN\s+', '', s)
+                        return s
+                    df_clean["Kota"] = df_clean["Kota"].apply(clean_kota)
                 # ── End Kota ──────────────────────────────────────────
 
                 for col in df_clean.select_dtypes(include='object').columns:
