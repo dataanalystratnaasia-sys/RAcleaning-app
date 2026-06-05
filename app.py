@@ -33,14 +33,15 @@ TEMPLATES = {
             "Nama Kategori Barang":     "Nama Kategori Barang Barang & Jasa",
             "Nama Tenaga Penjual":      "Nama Tenaga Penjual",
             "Nama Kategori Pelanggan":  "Nama Kategori Pelanggan Pesanan Penjualan",
+            # Kota disisipkan setelah Nama Kategori Pelanggan via kolom_kota_after
             "Handphone":                "Handphone Kontak Utama Pelanggan Pesanan Penjuala",
         },
-        "kolom_alamat":  "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
-        "kolom_hp":      "Handphone",
-        "kolom_numeric": ["Kuantitas", "Total Harga"],
-        "kolom_tanggal": ["Tanggal"],
+        "kolom_alamat":     "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
+        "kolom_kota_after": "Nama Kategori Pelanggan",  # Kota sisip di sini, Handphone setelahnya
+        "kolom_hp":         "Handphone",
+        "kolom_numeric":    ["Kuantitas", "Total Harga"],
+        "kolom_tanggal":    ["Tanggal"],
     },
-
     "Monitoring Pelanggan | Sales Offline (PerBulan)": {
         "output_file": "CLEANING_MONITORING_PELANGGAN_PerBulan.xlsx",
         "sheet_name": "Monitoring Pelanggan",
