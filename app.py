@@ -118,7 +118,7 @@ TEMPLATES = {
         "clean_hp": False,
         "replace_nan_string": True,
         "sales_filter":  None,
-        "sales_exclude": None,
+        "sales_exclude": ["ARUM", "LUTHFIAH WARDAH"],
         "kolom_map": {
             "Divisi":                   "Divisi",
             "Pelanggan":                "Pelanggan",
