@@ -34,10 +34,12 @@ TEMPLATES = {
             "Nama Tenaga Penjual":      "Nama Tenaga Penjual",
             "Nama Kategori Pelanggan":  "Nama Kategori Pelanggan Pesanan Penjualan",
             "Handphone":                "Handphone Kontak Utama Pelanggan Pesanan Penjuala",
+            "Alamat Pengiriman Pesanan Detail Pengiriman Pesan": "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
         },
         "kolom_alamat":     "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
         "kolom_kota_after": "Nama Kategori Pelanggan",
         "kota_upper":       True,
+        "kota_strip_prefix": False,
         "kolom_hp":         "Handphone",
         "kolom_numeric":    ["Kuantitas", "Total Harga"],
         "kolom_tanggal":    ["Tanggal"],
@@ -66,10 +68,12 @@ TEMPLATES = {
             "Handphone":                "Handphone Kontak Utama Pelanggan Pesanan Penjuala",
             "Nama Merek Barang":        "Nama Merek Barang Barang & Jasa",
             "Nama Kategori Barang":     "Nama Kategori Barang Barang & Jasa",
+            "Alamat Pengiriman Pesanan Detail Pengiriman Pesan": "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
         },
         "kolom_alamat":     "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
         "kolom_kota_after": "Nama Kategori Pelanggan",
         "kota_upper":       True,
+        "kota_strip_prefix": False,
         "kolom_hp":         "Handphone",
         "kolom_numeric":    ["Kuantitas", "Total Harga"],
         "kolom_tanggal":    ["Tanggal"],
@@ -100,10 +104,12 @@ TEMPLATES = {
             "Alamat Pengiriman Pesanan Detail Pengiriman Pesan": "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
             "Nama Merek Barang":                                 "Nama Merek Barang Barang & Jasa",
             "Nama Kategori Barang":                              "Nama Kategori Barang Barang & Jasa",
+            "Alamat Pengiriman Pesanan Detail Pengiriman Pesan": "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
         },
         "kolom_alamat":     "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
         "kolom_kota_after": "Nama Kategori Pelanggan",
         "kota_upper":       True,
+        "kota_strip_prefix": False,
         "kolom_hp":         "Handphone",
         "kolom_numeric":    ["Kuantitas", "Total Harga"],
         "kolom_tanggal":    ["Tanggal"],
@@ -132,10 +138,12 @@ TEMPLATES = {
             # Kota disisipkan setelah Nama Kategori Pelanggan
             "Nama Merek Barang":        "Nama Merek Barang Barang & Jasa",
             "Nama Kategori Barang":     "Nama Kategori Barang Barang & Jasa",
+            "Alamat Pengiriman Pesanan Detail Pengiriman Pesan": "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
         },
         "kolom_alamat":     "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
         "kolom_kota_after": "Nama Kategori Pelanggan",
         "kota_upper":       True,
+        "kota_strip_prefix": False,
         "kolom_hp":         None,
         "kolom_numeric":    ["Kuantitas", "Total Harga"],
         "kolom_tanggal":    ["Tanggal"],
@@ -170,7 +178,8 @@ TEMPLATES = {
         "kolom_hp":         None,
         "kolom_numeric":    ["QTY", "Total Harga"],
         "kolom_tanggal":    ["Tanggal"],
-        "kota_upper":       False,   # flag untuk kapital
+        "kota_upper":       False,
+        "kota_strip_prefix": True,
     },
 
     "Filter SKU Diskon (Bu Dhany)": {
@@ -730,10 +739,10 @@ else:
                         if pd.isna(val):
                             return val
                         s = str(val).upper().strip()
-                        # buang prefix KOTA dan KAB. beserta spasi setelahnya
-                        s = re.sub(r'^KOTA\s+', '', s)
-                        s = re.sub(r'^KAB\.\s*', '', s)
-                        s = re.sub(r'^KABUPATEN\s+', '', s)
+                        if cfg.get("kota_strip_prefix", True): # kapital aja
+                            s = re.sub(r'^KOTA\s+', '', s)
+                            s = re.sub(r'^KAB\.\s*', '', s)
+                            s = re.sub(r'^KABUPATEN\s+', '', s)
                         return s
                     df_clean["Kota"] = df_clean["Kota"].apply(clean_kota)
                 # ── End Kota ──────────────────────────────────────────
