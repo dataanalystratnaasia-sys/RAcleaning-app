@@ -739,6 +739,7 @@ else:
                             s = re.sub(r'^KOTA\s+', '', s)
                             s = re.sub(r'^KAB\.\s*', '', s)
                             s = re.sub(r'^KABUPATEN\s+', '', s)
+                            s = re.sub(r'^ADMINISTRASI\s+', '', s)
                         return s
                     df_clean["Kota"] = df_clean["Kota"].apply(clean_kota)
                 # ── End Kota ──────────────────────────────────────────
