@@ -827,6 +827,17 @@ else:
                     )
                     df_clean = df_clean[mask_exclude].reset_index(drop=True)
                 # ── End Filter/Exclude Sales ───────────────────────────
+                # ── Fill Nama Tenaga Penjual dari Pelanggan (khusus template tertentu) ──
+                if cfg.get("fill_sales_from_pelanggan") \
+                        and "Nama Tenaga Penjual" in df_clean.columns \
+                        and "Pelanggan" in df_clean.columns:
+                    mask_kosong = (
+                        df_clean["Nama Tenaga Penjual"].isna()
+                        | (df_clean["Nama Tenaga Penjual"].astype(str).str.strip() == '')
+                        | (df_clean["Nama Tenaga Penjual"].astype(str).str.upper().str.strip() == 'NAN')
+                    )
+                    df_clean.loc[mask_kosong, "Nama Tenaga Penjual"] = df_clean.loc[mask_kosong, "Pelanggan"]
+                # ── End Fill ──────────────────────────────────────────
 
             if missing:
                 st.warning(f"⚠️ Kolom tidak ditemukan di file original (diisi NaN): `{'`, `'.join(missing)}`")
