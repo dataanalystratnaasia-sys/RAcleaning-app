@@ -178,6 +178,40 @@ TEMPLATES = {
         "kota_strip_prefix": False,
     },
 
+    "Demand & Sales Velocity": {
+        "output_file": "DEMAND_SALES_VELOCITY.xlsx",
+        "sheet_name": "Demand & Sales Velocity",
+        "use_master_kota": True,
+        "sku_filter": None,
+        "tanggal_format": None,
+        "clean_hp": False,
+        "replace_nan_string": True,
+        "sales_filter":  None,
+        "sales_exclude": None,
+        "kolom_map": {
+            "Divisi":                   "Divisi",
+            "Pelanggan":                "Pelanggan",
+            "Tanggal":                  "Tanggal",
+            "SKU":                      "Kode #",
+            "Nama Barang":              "Nama Barang",
+            "Kuantitas":                "Kuantitas",
+            "Total Harga":              "Total Harga",
+            "Nama Tenaga Penjual":      "Nama Tenaga Penjual",
+            "Nama Kategori Pelanggan":  "Nama Kategori Pelanggan Pesanan Penjualan",
+            # Kota disisipkan setelah Nama Kategori Pelanggan
+            "Alamat":                   "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
+            "Nama Merek Barang":        "Nama Merek Barang Barang & Jasa",
+            "Nama Kategori Barang":     "Nama Kategori Barang Barang & Jasa",
+        },
+        "kolom_alamat":      "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
+        "kolom_kota_after":  "Nama Kategori Pelanggan",
+        "kota_upper":        True,
+        "kota_strip_prefix": True,   # buang KOTA dan KAB.
+        "kolom_hp":          None,
+        "kolom_numeric":     ["Kuantitas", "Total Harga"],
+        "kolom_tanggal":     ["Tanggal"],
+    },
+
     "Filter SKU Diskon (Bu Dhany)": {
         "type": "merge_sku",
         "output_file": "hasil_riwayat_filtered_BuDhany.xlsx",
