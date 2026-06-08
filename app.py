@@ -188,6 +188,7 @@ TEMPLATES = {
         "replace_nan_string": True,
         "sales_filter":  None,
         "sales_exclude": None,
+        "fill_sales_from_pelanggan": True,
         "kolom_map": {
             "Divisi":                   "Divisi",
             "Pelanggan":                "Pelanggan",
