@@ -242,6 +242,13 @@ TEMPLATES = {
         "sheet_name": "DATA",
         "use_master_kota": False,
     },
+
+    "Kuadran ALL SALES": {
+        "type": "kuadran_all_sales",
+        "output_file": "DATA_KUADRAN_ALL_SALES.xlsx",
+        "sheet_name": "DATA",
+        "use_master_kota": False,
+    },
 }
 
 MARKETPLACE_KEYWORDS = ['shopee', 'tiktok', 'lazada', 'blibli', 'tokopedia']
@@ -323,6 +330,22 @@ def build_bosch_marketplace(df):
     for col in df_clean.select_dtypes(include='object').columns:
         df_clean[col] = df_clean[col].astype(str).str.strip()
     mandatory_cols = [c for c in ['Tanggal', 'Nomor #', 'Kode #', 'Nama Barang'] if c in df_clean.columns]
+    df_clean = df_clean.dropna(subset=mandatory_cols).reset_index(drop=True)
+    return df_clean
+
+def build_kuadran_all_sales(df):
+    """Susunan kolom: Merek Barang | Kode # | Nama Barang | QTY | @Harga | Total Harga | Laba"""
+    df_clean = pd.DataFrame()
+    df_clean['Merek Barang'] = df['Nama Merek Barang Barang & Jasa'] if 'Nama Merek Barang Barang & Jasa' in df.columns else np.nan
+    df_clean['Kode #']       = df['Kode #'] if 'Kode #' in df.columns else np.nan
+    df_clean['Nama Barang']  = df['Nama Barang'] if 'Nama Barang' in df.columns else np.nan
+    df_clean['QTY']          = pd.to_numeric(df['Kuantitas'], errors='coerce') if 'Kuantitas' in df.columns else np.nan
+    df_clean['@Harga']       = pd.to_numeric(df['@Harga'], errors='coerce') if '@Harga' in df.columns else np.nan
+    df_clean['Total Harga']  = pd.to_numeric(df['Total Harga'], errors='coerce') if 'Total Harga' in df.columns else np.nan
+    df_clean['Laba']         = pd.to_numeric(df['Laba'], errors='coerce') if 'Laba' in df.columns else np.nan
+    for col in df_clean.select_dtypes(include='object').columns:
+        df_clean[col] = df_clean[col].astype(str).str.strip()
+    mandatory_cols = [c for c in ['Kode #', 'Nama Barang'] if c in df_clean.columns]
     df_clean = df_clean.dropna(subset=mandatory_cols).reset_index(drop=True)
     return df_clean
 
@@ -415,6 +438,12 @@ with st.sidebar:
         st.write("🏪 Hanya Marketplace")
         st.write("🗺️ Master Kota: ❌")
         st.write("📈 Gross Profit/Item: ✅")
+    elif cfg.get("type") == "kuadran_all_sales":
+        st.write(f"📄 Output: `{cfg['output_file']}`")
+        st.write(f"📋 Sheet: `{cfg['sheet_name']}`")
+        st.write("🔧 Tipe: Kuadran ALL SALES")
+        st.write("🗺️ Master Kota: ❌")
+        st.write("📊 Kolom: Merek Barang, Kode #, Nama Barang, QTY, @Harga, Total Harga, Laba")
     else:
         st.write(f"📄 Output: `{cfg['output_file']}`")
         st.write(f"📋 Sheet: `{cfg['sheet_name']}`")
@@ -685,6 +714,58 @@ elif cfg.get("type") == "bosch_marketplace":
             st.download_button(
                 label=f"⬇️ Download {cfg['output_file']}",
                 data=to_excel_marketplace(df_clean),
+                file_name=cfg["output_file"],
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+            )
+
+        except Exception as e:
+            st.error(f"❌ Error saat memproses: {e}")
+            st.exception(e)
+    else:
+        st.info("👆 Upload Data Original untuk memulai proses cleaning.")
+
+# ============================================================
+# CABANG: KUADRAN ALL SALES
+# ============================================================
+elif cfg.get("type") == "kuadran_all_sales":
+
+    st.markdown('<div class="step-label">📂 Step 1 — Data Original</div>', unsafe_allow_html=True)
+    file_ori = st.file_uploader("Upload Data Original (.xlsx)", type=["xlsx"], key="kuadran_all_sales")
+
+    if file_ori:
+        try:
+            df = pd.read_excel(file_ori)
+            df = df.loc[:, ~df.columns.astype(str).str.startswith('Unnamed')]
+            df.columns = df.columns.str.strip()
+
+            with st.expander("👁️ Preview Data Original", expanded=False):
+                st.dataframe(df.head(10), use_container_width=True)
+
+            with st.spinner("⚙️ Sedang memproses Kuadran ALL SALES..."):
+                df_clean = build_kuadran_all_sales(df)
+
+            st.markdown("---")
+            st.markdown("### 📊 Hasil Cleaning")
+            c1, c2, c3 = st.columns(3)
+            c1.markdown(f'<div class="stat-card" style="border-left-color:#2563eb"><div class="label">Total Data</div><div class="value" style="color:#2563eb">{len(df_clean):,}</div></div>', unsafe_allow_html=True)
+            c2.markdown(f'<div class="stat-card" style="border-left-color:#7c3aed"><div class="label">SKU Unik</div><div class="value" style="color:#7c3aed">{df_clean["Kode #"].nunique():,}</div></div>', unsafe_allow_html=True)
+            c3.markdown(f'<div class="stat-card" style="border-left-color:#16a34a"><div class="label">Merek Unik</div><div class="value" style="color:#16a34a">{df_clean["Merek Barang"].nunique():,}</div></div>', unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.dataframe(df_clean.head(20), use_container_width=True)
+
+            def to_excel_kuadran_all(df):
+                buf = BytesIO()
+                with pd.ExcelWriter(buf, engine='openpyxl') as w:
+                    df.to_excel(w, index=False, sheet_name=cfg["sheet_name"], merge_cells=False)
+                return buf.getvalue()
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown('<div class="step-label">📥 Step 2 — Download Hasil</div>', unsafe_allow_html=True)
+            st.download_button(
+                label=f"⬇️ Download {cfg['output_file']}",
+                data=to_excel_kuadran_all(df_clean),
                 file_name=cfg["output_file"],
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
