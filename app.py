@@ -322,6 +322,7 @@ def build_bosch_marketplace(df):
     df_clean['Pelanggan']   = df['Pelanggan'] if 'Pelanggan' in df.columns else np.nan
     df_clean['Kode #']      = df['Kode #'] if 'Kode #' in df.columns else np.nan
     df_clean['Nama Barang'] = df['Nama Barang'] if 'Nama Barang' in df.columns else np.nan
+    df_clean['Merek Barang'] = df['Nama Merek Barang Barang & Jasa'] if 'Nama Merek Barang Barang & Jasa' in df.columns else np.nan
     df_clean['QTY']         = pd.to_numeric(df['Kuantitas'], errors='coerce') if 'Kuantitas' in df.columns else np.nan
     df_clean['@Harga']      = pd.to_numeric(df['@Harga'], errors='coerce') if '@Harga' in df.columns else np.nan
     df_clean['Total Harga'] = pd.to_numeric(df['Total Harga'], errors='coerce') if 'Total Harga' in df.columns else np.nan
