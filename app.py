@@ -249,6 +249,13 @@ TEMPLATES = {
         "sheet_name": "DATA",
         "use_master_kota": False,
     },
+
+        "KUADRAN STREAMLIT": {
+        "type": "kuadran_streamlit",
+        "output_file": "DATA_KUADRAN_STREAMLIT.xlsx",
+        "sheet_name": "DATA",
+        "use_master_kota": False,
+    },
 }
 
 MARKETPLACE_KEYWORDS = ['shopee', 'tiktok', 'lazada', 'blibli', 'tokopedia']
@@ -350,6 +357,41 @@ def build_kuadran_all_sales(df):
     df_clean = df_clean.dropna(subset=mandatory_cols).reset_index(drop=True)
     return df_clean
 
+KUADRAN_STREAMLIT_SOURCE_COLS = [
+    'Tanggal', 'Nama Tenaga Penjual', 'Pelanggan',
+    'Nama Merek Barang Barang & Jasa', 'Kode #', 'Nama Barang',
+    'Nama Kategori Barang Barang & Jasa', 'Kuantitas', '@Harga',
+    'Total Harga', 'Laba',
+]
+
+def build_kuadran_streamlit(df):
+    """Susunan kolom: Tanggal | Nama Tenaga Penjual | Pelanggan | Nama Merek Barang Barang & Jasa |
+    Kode # | Nama Barang | Nama Kategori Barang Barang & Jasa | Kuantitas | @Harga | Total Harga |
+    Laba | Gross Profit/Item (kosong)"""
+    def col_or_nan(name):
+        return df[name] if name in df.columns else np.nan
+
+    df_clean = pd.DataFrame()
+    df_clean['Tanggal']                            = pd.to_datetime(col_or_nan('Tanggal'), errors='coerce')
+    df_clean['Nama Tenaga Penjual']                = col_or_nan('Nama Tenaga Penjual')
+    df_clean['Pelanggan']                          = col_or_nan('Pelanggan')
+    df_clean['Nama Merek Barang Barang & Jasa']    = col_or_nan('Nama Merek Barang Barang & Jasa')
+    df_clean['Kode #']                             = col_or_nan('Kode #')
+    df_clean['Nama Barang']                        = col_or_nan('Nama Barang')
+    df_clean['Nama Kategori Barang Barang & Jasa'] = col_or_nan('Nama Kategori Barang Barang & Jasa')
+    df_clean['Kuantitas']                          = pd.to_numeric(col_or_nan('Kuantitas'), errors='coerce')
+    df_clean['@Harga']                             = pd.to_numeric(col_or_nan('@Harga'), errors='coerce')
+    df_clean['Total Harga']                        = pd.to_numeric(col_or_nan('Total Harga'), errors='coerce')
+    df_clean['Laba']                               = pd.to_numeric(col_or_nan('Laba'), errors='coerce')
+    df_clean['Gross Profit/Item']                  = np.nan   # sengaja dikosongkan
+
+    # strip spasi tanpa mengubah NaN menjadi string 'nan'
+    for col in df_clean.select_dtypes(include='object').columns:
+        df_clean[col] = df_clean[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
+
+    df_clean = df_clean.dropna(subset=['Kode #', 'Nama Barang']).reset_index(drop=True)
+    return df_clean
+
 def insert_kota_after(df, after_col, kota_series):
     """Sisipkan kolom Kota tepat setelah kolom after_col."""
     if after_col not in df.columns:
@@ -445,6 +487,12 @@ with st.sidebar:
         st.write("🔧 Tipe: Kuadran ALL SALES")
         st.write("🗺️ Master Kota: ❌")
         st.write("📊 Kolom: Merek Barang, Kode #, Nama Barang, QTY, @Harga, Total Harga, Laba")
+    elif cfg.get("type") == "kuadran_streamlit":
+        st.write(f"📄 Output: `{cfg['output_file']}`")
+        st.write(f"📋 Sheet: `{cfg['sheet_name']}`")
+        st.write("🔧 Tipe: KUADRAN STREAMLIT")
+        st.write("🗺️ Master Kota: ❌")
+        st.write("📊 Kolom: Tanggal, Sales, Pelanggan, Merek, Kode #, Nama Barang, Kategori, Kuantitas, @Harga, Total Harga, Laba, Gross Profit/Item (kosong)")
     else:
         st.write(f"📄 Output: `{cfg['output_file']}`")
         st.write(f"📋 Sheet: `{cfg['sheet_name']}`")
@@ -767,6 +815,63 @@ elif cfg.get("type") == "kuadran_all_sales":
             st.download_button(
                 label=f"⬇️ Download {cfg['output_file']}",
                 data=to_excel_kuadran_all(df_clean),
+                file_name=cfg["output_file"],
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+            )
+
+        except Exception as e:
+            st.error(f"❌ Error saat memproses: {e}")
+            st.exception(e)
+    else:
+        st.info("👆 Upload Data Original untuk memulai proses cleaning.")
+
+# ============================================================
+# CABANG: KUADRAN STREAMLIT
+# ============================================================
+elif cfg.get("type") == "kuadran_streamlit":
+
+    st.markdown('<div class="step-label">📂 Step 1 — Data Original</div>', unsafe_allow_html=True)
+    file_ori = st.file_uploader("Upload Data Original (.xlsx)", type=["xlsx"], key="kuadran_streamlit")
+
+    if file_ori:
+        try:
+            df = pd.read_excel(file_ori)
+            df = df.loc[:, ~df.columns.astype(str).str.startswith('Unnamed')]
+            df.columns = df.columns.str.strip()
+
+            with st.expander("👁️ Preview Data Original", expanded=False):
+                st.dataframe(df.head(10), use_container_width=True)
+
+            missing = [c for c in KUADRAN_STREAMLIT_SOURCE_COLS if c not in df.columns]
+            if missing:
+                st.warning(f"⚠️ Kolom tidak ditemukan di file original (diisi kosong): `{'`, `'.join(missing)}`")
+
+            with st.spinner("⚙️ Sedang memproses KUADRAN STREAMLIT..."):
+                df_clean = build_kuadran_streamlit(df)
+
+            st.markdown("---")
+            st.markdown("### 📊 Hasil Cleaning")
+            c1, c2, c3, c4 = st.columns(4)
+            c1.markdown(f'<div class="stat-card" style="border-left-color:#2563eb"><div class="label">Total Data</div><div class="value" style="color:#2563eb">{len(df_clean):,}</div></div>', unsafe_allow_html=True)
+            c2.markdown(f'<div class="stat-card" style="border-left-color:#7c3aed"><div class="label">SKU Unik</div><div class="value" style="color:#7c3aed">{df_clean["Kode #"].nunique():,}</div></div>', unsafe_allow_html=True)
+            c3.markdown(f'<div class="stat-card" style="border-left-color:#16a34a"><div class="label">Pelanggan Unik</div><div class="value" style="color:#16a34a">{df_clean["Pelanggan"].nunique():,}</div></div>', unsafe_allow_html=True)
+            c4.markdown(f'<div class="stat-card" style="border-left-color:#ea580c"><div class="label">Merek Unik</div><div class="value" style="color:#ea580c">{df_clean["Nama Merek Barang Barang & Jasa"].nunique():,}</div></div>', unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.dataframe(df_clean.head(20), use_container_width=True)
+
+            def to_excel_kuadran_streamlit(df):
+                buf = BytesIO()
+                with pd.ExcelWriter(buf, engine='openpyxl') as w:
+                    df.to_excel(w, index=False, sheet_name=cfg["sheet_name"], merge_cells=False)
+                return buf.getvalue()
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown('<div class="step-label">📥 Step 2 — Download Hasil</div>', unsafe_allow_html=True)
+            st.download_button(
+                label=f"⬇️ Download {cfg['output_file']}",
+                data=to_excel_kuadran_streamlit(df_clean),
                 file_name=cfg["output_file"],
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
