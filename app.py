@@ -364,10 +364,19 @@ KUADRAN_STREAMLIT_SOURCE_COLS = [
     'Total Harga', 'Laba',
 ]
 
+# Kata yang jika ada di 'Nama Barang' akan di-exclude (tidak peduli huruf besar/kecil)
+KUADRAN_STREAMLIT_EXCLUDE_NAMA = ['MERCHANDISE', 'CLAIM']
+
 def build_kuadran_streamlit(df):
     """Susunan kolom: Tanggal | Nama Tenaga Penjual | Pelanggan | Nama Merek Barang Barang & Jasa |
     Kode # | Nama Barang | Nama Kategori Barang Barang & Jasa | Kuantitas | @Harga | Total Harga |
-    Laba | Gross Profit/Item (kosong)"""
+    Laba | Gross Profit/Item (kosong)
+
+    Filter exclude:
+      - Nama Barang mengandung 'MERCHANDISE' atau 'CLAIM' (case-insensitive)
+      - Kode # mengandung '+'
+    Return: (df_clean, jumlah_baris_yang_di-exclude)
+    """
     def col_or_nan(name):
         return df[name] if name in df.columns else np.nan
 
@@ -385,12 +394,22 @@ def build_kuadran_streamlit(df):
     df_clean['Laba']                               = pd.to_numeric(col_or_nan('Laba'), errors='coerce')
     df_clean['Gross Profit/Item']                  = np.nan   # sengaja dikosongkan
 
-    # strip spasi tanpa mengubah NaN menjadi string 'nan'
     for col in df_clean.select_dtypes(include='object').columns:
         df_clean[col] = df_clean[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
 
     df_clean = df_clean.dropna(subset=['Kode #', 'Nama Barang']).reset_index(drop=True)
-    return df_clean
+
+    n_before = len(df_clean)
+
+    pattern_nama = '|'.join(re.escape(k) for k in KUADRAN_STREAMLIT_EXCLUDE_NAMA)
+    mask_nama = df_clean['Nama Barang'].astype(str).str.contains(
+        pattern_nama, case=False, regex=True, na=False
+    )
+    mask_kode = df_clean['Kode #'].astype(str).str.contains('+', regex=False, na=False)
+
+    df_clean = df_clean[~(mask_nama | mask_kode)].reset_index(drop=True)
+    n_excluded = n_before - len(df_clean)
+    return df_clean, n_excluded
 
 def insert_kota_after(df, after_col, kota_series):
     """Sisipkan kolom Kota tepat setelah kolom after_col."""
@@ -493,6 +512,8 @@ with st.sidebar:
         st.write("🔧 Tipe: KUADRAN STREAMLIT")
         st.write("🗺️ Master Kota: ❌")
         st.write("📊 Kolom: Tanggal, Sales, Pelanggan, Merek, Kode #, Nama Barang, Kategori, Kuantitas, @Harga, Total Harga, Laba, Gross Profit/Item (kosong)")
+        st.write("🚫 Exclude Nama Barang mengandung: `MERCHANDISE`, `CLAIM`")
+        st.write("🚫 Exclude Kode # mengandung: `+`")
     else:
         st.write(f"📄 Output: `{cfg['output_file']}`")
         st.write(f"📋 Sheet: `{cfg['sheet_name']}`")
@@ -848,16 +869,17 @@ elif cfg.get("type") == "kuadran_streamlit":
                 st.warning(f"⚠️ Kolom tidak ditemukan di file original (diisi kosong): `{'`, `'.join(missing)}`")
 
             with st.spinner("⚙️ Sedang memproses KUADRAN STREAMLIT..."):
-                df_clean = build_kuadran_streamlit(df)
+                df_clean, n_excluded = build_kuadran_streamlit(df)
 
             st.markdown("---")
             st.markdown("### 📊 Hasil Cleaning")
-            c1, c2, c3, c4 = st.columns(4)
+            c1, c2, c3, c4, c5 = st.columns(5)
             c1.markdown(f'<div class="stat-card" style="border-left-color:#2563eb"><div class="label">Total Data</div><div class="value" style="color:#2563eb">{len(df_clean):,}</div></div>', unsafe_allow_html=True)
-            c2.markdown(f'<div class="stat-card" style="border-left-color:#7c3aed"><div class="label">SKU Unik</div><div class="value" style="color:#7c3aed">{df_clean["Kode #"].nunique():,}</div></div>', unsafe_allow_html=True)
-            c3.markdown(f'<div class="stat-card" style="border-left-color:#16a34a"><div class="label">Pelanggan Unik</div><div class="value" style="color:#16a34a">{df_clean["Pelanggan"].nunique():,}</div></div>', unsafe_allow_html=True)
-            c4.markdown(f'<div class="stat-card" style="border-left-color:#ea580c"><div class="label">Merek Unik</div><div class="value" style="color:#ea580c">{df_clean["Nama Merek Barang Barang & Jasa"].nunique():,}</div></div>', unsafe_allow_html=True)
-
+            c2.markdown(f'<div class="stat-card" style="border-left-color:#dc2626"><div class="label">Di-exclude</div><div class="value" style="color:#dc2626">{n_excluded:,}</div></div>', unsafe_allow_html=True)
+            c3.markdown(f'<div class="stat-card" style="border-left-color:#7c3aed"><div class="label">SKU Unik</div><div class="value" style="color:#7c3aed">{df_clean["Kode #"].nunique():,}</div></div>', unsafe_allow_html=True)
+            c4.markdown(f'<div class="stat-card" style="border-left-color:#16a34a"><div class="label">Pelanggan Unik</div><div class="value" style="color:#16a34a">{df_clean["Pelanggan"].nunique():,}</div></div>', unsafe_allow_html=True)
+            c5.markdown(f'<div class="stat-card" style="border-left-color:#ea580c"><div class="label">Merek Unik</div><div class="value" style="color:#ea580c">{df_clean["Nama Merek Barang Barang & Jasa"].nunique():,}</div></div>', unsafe_allow_html=True)
+            
             st.markdown("<br>", unsafe_allow_html=True)
             st.dataframe(df_clean.head(20), use_container_width=True)
 
