@@ -367,6 +367,9 @@ KUADRAN_STREAMLIT_SOURCE_COLS = [
 # Kata yang jika ada di 'Nama Barang' akan di-exclude (tidak peduli huruf besar/kecil)
 KUADRAN_STREAMLIT_EXCLUDE_NAMA = ['MERCHANDISE', 'CLAIM']
 
+# Kata yang jika ada di 'Nama Kategori Barang Barang & Jasa' akan di-exclude (case-insensitive)
+KUADRAN_STREAMLIT_EXCLUDE_KATEGORI = ['MERCHANDISE']
+
 def build_kuadran_streamlit(df):
     """Susunan kolom: Tanggal | Nama Tenaga Penjual | Pelanggan | Nama Merek Barang Barang & Jasa |
     Kode # | Nama Barang | Nama Kategori Barang Barang & Jasa | Kuantitas | @Harga | Total Harga |
@@ -374,6 +377,7 @@ def build_kuadran_streamlit(df):
 
     Filter exclude:
       - Nama Barang mengandung 'MERCHANDISE' atau 'CLAIM' (case-insensitive)
+      - Nama Kategori Barang Barang & Jasa mengandung 'MERCHANDISE' (case-insensitive)
       - Kode # mengandung '+'
     Return: (df_clean, jumlah_baris_yang_di-exclude)
     """
@@ -405,9 +409,15 @@ def build_kuadran_streamlit(df):
     mask_nama = df_clean['Nama Barang'].astype(str).str.contains(
         pattern_nama, case=False, regex=True, na=False
     )
+
+    pattern_kategori = '|'.join(re.escape(k) for k in KUADRAN_STREAMLIT_EXCLUDE_KATEGORI)
+    mask_kategori = df_clean['Nama Kategori Barang Barang & Jasa'].astype(str).str.contains(
+        pattern_kategori, case=False, regex=True, na=False
+    )
+
     mask_kode = df_clean['Kode #'].astype(str).str.contains('+', regex=False, na=False)
 
-    df_clean = df_clean[~(mask_nama | mask_kode)].reset_index(drop=True)
+    df_clean = df_clean[~(mask_nama | mask_kategori | mask_kode)].reset_index(drop=True)
     n_excluded = n_before - len(df_clean)
     return df_clean, n_excluded
 
@@ -513,6 +523,7 @@ with st.sidebar:
         st.write("🗺️ Master Kota: ❌")
         st.write("📊 Kolom: Tanggal, Sales, Pelanggan, Merek, Kode #, Nama Barang, Kategori, Kuantitas, @Harga, Total Harga, Laba, Gross Profit/Item (kosong)")
         st.write("🚫 Exclude Nama Barang mengandung: `MERCHANDISE`, `CLAIM`")
+        st.write("🚫 Exclude Nama Kategori Barang mengandung: `MERCHANDISE`")
         st.write("🚫 Exclude Kode # mengandung: `+`")
     else:
         st.write(f"📄 Output: `{cfg['output_file']}`")
