@@ -220,7 +220,8 @@ TEMPLATES = {
         "output_file": "hasil_riwayat_filtered_BuDhany.xlsx",
         "sheet_name": "Riwayat Filtered",
         "merge_key": "SKU",
-        "sku_cols": ["SKU", "SEGMENT"],
+        "sku_cols": ["SKU"],               # wajib ada
+        "sku_optional_cols": ["SEGMENT"],  # dipakai kalau ada, kalau tidak ada dilewati
     },
 
     "Laporan Sell Out Bosch (Pak Sonny)": {
@@ -563,6 +564,7 @@ if cfg.get("type") == "merge_sku":
             sku_df.columns = sku_df.columns.str.strip()
             trx_df.columns = trx_df.columns.str.strip()
 
+                        # Validasi kolom wajib saja
             for col in cfg["sku_cols"]:
                 if col not in sku_df.columns:
                     st.error(f"❌ Kolom **'{col}'** tidak ditemukan di SKU List!")
@@ -573,15 +575,27 @@ if cfg.get("type") == "merge_sku":
                 st.error(f"❌ Kolom **'{merge_key}'** tidak ditemukan di Riwayat Pembelian!")
                 st.stop()
 
+            # Kolom opsional: dipakai hanya jika ada di SKU List
+            optional_found   = [c for c in cfg.get("sku_optional_cols", []) if c in sku_df.columns]
+            optional_missing = [c for c in cfg.get("sku_optional_cols", []) if c not in sku_df.columns]
+            merge_cols = cfg["sku_cols"] + optional_found
+
+            if optional_found:
+                st.success(f"✅ Kolom tambahan ikut di-merge: `{'`, `'.join(optional_found)}`")
+            if optional_missing:
+                st.info(f"ℹ️ Kolom `{'`, `'.join(optional_missing)}` tidak ada di SKU List — merge hanya berdasarkan SKU.")
+
             with st.expander("👁️ Preview SKU List", expanded=False):
                 st.dataframe(sku_df.head(10), use_container_width=True)
             with st.expander("👁️ Preview Riwayat Pembelian", expanded=False):
                 st.dataframe(trx_df.head(10), use_container_width=True)
 
             with st.spinner("⚙️ Sedang merge data..."):
-                sku_df[merge_key] = sku_df[merge_key].astype(str)
-                trx_df[merge_key] = trx_df[merge_key].astype(str)
-                result = trx_df.merge(sku_df[cfg["sku_cols"]], on=merge_key, how="inner")
+                sku_df[merge_key] = sku_df[merge_key].astype(str).str.strip()
+                trx_df[merge_key] = trx_df[merge_key].astype(str).str.strip()
+                # Hindari baris dobel di hasil kalau SKU muncul lebih dari sekali di SKU List
+                sku_ref = sku_df[merge_cols].drop_duplicates(subset=merge_key)
+                result = trx_df.merge(sku_ref, on=merge_key, how="inner")
 
             st.markdown("---")
             st.markdown("### 📊 Hasil Merge")
