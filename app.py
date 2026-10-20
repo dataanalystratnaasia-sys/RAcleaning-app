@@ -315,8 +315,9 @@ def build_ptra(df):
     for col in df_clean.select_dtypes(include='object').columns:
         df_clean[col] = df_clean[col].str.strip()
     mask_mp  = df_clean['Pelanggan'].apply(is_marketplace)
-    df_mp    = df_clean[mask_mp].reset_index(drop=True)
-    df_sales = df_clean[~mask_mp].reset_index(drop=True)
+    df_mp    = sort_tanggal(df_clean[mask_mp].reset_index(drop=True))
+    df_sales = sort_tanggal(df_clean[~mask_mp].reset_index(drop=True))
+    df_clean = sort_tanggal(df_clean)
     return df_clean, df_mp, df_sales
 
 def build_bosch_marketplace(df):
@@ -340,6 +341,7 @@ def build_bosch_marketplace(df):
         df_clean[col] = df_clean[col].astype(str).str.strip()
     mandatory_cols = [c for c in ['Tanggal', 'Nomor #', 'Kode #', 'Nama Barang'] if c in df_clean.columns]
     df_clean = df_clean.dropna(subset=mandatory_cols).reset_index(drop=True)
+    df_clean = sort_tanggal(df_clean, 'Tanggal')
     return df_clean
 
 def build_kuadran_all_sales(df):
@@ -419,6 +421,7 @@ def build_kuadran_streamlit(df):
     mask_kode = df_clean['Kode #'].astype(str).str.contains('+', regex=False, na=False)
 
     df_clean = df_clean[~(mask_nama | mask_kategori | mask_kode)].reset_index(drop=True)
+    df_clean = sort_tanggal(df_clean, 'Tanggal')
     n_excluded = n_before - len(df_clean)
     return df_clean, n_excluded
 
@@ -431,6 +434,17 @@ def insert_kota_after(df, after_col, kota_series):
     idx  = cols.index(after_col) + 1
     df.insert(idx, 'Kota', kota_series)
     return df
+    
+def sort_tanggal(df, col='Tanggal'):
+    """Urutkan ascending berdasarkan kolom tanggal (lama → baru).
+    Aman jika kolom tidak ada / masih bertipe string."""
+    if df is None or col not in df.columns:
+        return df
+    key = pd.to_datetime(df[col], errors='coerce')
+    return (df.assign(_sort_key=key)
+              .sort_values('_sort_key', ascending=True, kind='stable', na_position='last')
+              .drop(columns='_sort_key')
+              .reset_index(drop=True))
 
 # ============================================================
 # STYLING
@@ -596,6 +610,7 @@ if cfg.get("type") == "merge_sku":
                 # Hindari baris dobel di hasil kalau SKU muncul lebih dari sekali di SKU List
                 sku_ref = sku_df[merge_cols].drop_duplicates(subset=merge_key)
                 result = trx_df.merge(sku_ref, on=merge_key, how="inner")
+                result = sort_tanggal(result, 'Tanggal')   # dilewati otomatis kalau kolom tidak ada
 
             st.markdown("---")
             st.markdown("### 📊 Hasil Merge")
@@ -677,6 +692,7 @@ elif cfg.get("type") == "bosch_sellout":
                 )
                 for col in df_clean.select_dtypes(include='object').columns:
                     df_clean[col] = df_clean[col].str.strip()
+                df_clean = sort_tanggal(df_clean, 'Tgl Nota')
 
             st.markdown("---")
             st.markdown("### 📊 Hasil Cleaning")
