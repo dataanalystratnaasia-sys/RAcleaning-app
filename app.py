@@ -234,6 +234,7 @@ TEMPLATES = {
                 "Penjualan":       "Penjualan",
                 "Satuan":          "Satuan",
                 "Tipe Transaksi":  "Tipe Transaksi",
+                "Pelanggan":                "Pelanggan",
             },
             "kolom_alamat":     None,
             "kolom_kota_after": None,
