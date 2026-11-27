@@ -43,7 +43,7 @@ TEMPLATES = {
         "kolom_numeric":    ["Kuantitas", "Total Harga"],
         "kolom_tanggal":    ["Tanggal"],
     },
-    
+
     "Monitoring Pelanggan | Sales Offline (PerBulan)": {
         "output_file": "CLEANING_MONITORING_PELANGGAN_PerBulan.xlsx",
         "sheet_name": "Monitoring Pelanggan",
@@ -76,7 +76,7 @@ TEMPLATES = {
         "kolom_numeric":    ["Kuantitas", "Total Harga"],
         "kolom_tanggal":    ["Tanggal"],
     },
-    
+
     "Monitoring Pelanggan | Sales Offline (Data2026)": {
         "output_file": "CLEANING_MONITORING_PELANGGAN_Data2026.xlsx",
         "sheet_name": "Monitoring Pelanggan 2026",
@@ -99,7 +99,6 @@ TEMPLATES = {
             "Nama Kategori Pelanggan":                           "Nama Kategori Pelanggan Pesanan Penjualan",
             "Handphone":                                         "Handphone Kontak Utama Pelanggan Pesanan Penjuala",
             "Alamat Pengiriman Pesanan":                         "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
-            "Alamat Pengiriman Pesanan Detail Pengiriman Pesan": "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
             "Nama Merek Barang":                                 "Nama Merek Barang Barang & Jasa",
             "Nama Kategori Barang":                              "Nama Kategori Barang Barang & Jasa",
             "Alamat Pengiriman Pesanan Detail Pengiriman Pesan": "Alamat Pengiriman Pesanan Detail Pengiriman Pesan",
@@ -111,7 +110,7 @@ TEMPLATES = {
         "kolom_numeric":    ["Kuantitas", "Total Harga"],
         "kolom_tanggal":    ["Tanggal"],
     },
-    
+
     "Data Pelanggan 2026 | Sales Offline": {
         "output_file": "CLEANING_DATA_PELANGGAN_2026_OFFLINE.xlsx",
         "sheet_name": "Data Pelanggan 2026",
@@ -144,7 +143,7 @@ TEMPLATES = {
         "kolom_numeric":    ["Kuantitas", "Total Harga"],
         "kolom_tanggal":    ["Tanggal"],
     },
-    
+
     "Master Dashboard All Sales": {
         "output_file": "MASTER_DASHBOARD_ALL_SALES.xlsx",
         "sheet_name": "Master Dashboard",
@@ -216,33 +215,34 @@ TEMPLATES = {
         "kolom_tanggal":     ["Tanggal"],
     },
 
-        "Penjualan PerBarang": {
-            "output_file": "CLEANING_PENJUALAN_PERBARANG.xlsx",
-            "sheet_name": "Penjualan PerBarang",
-            "use_master_kota": False,
-            "sku_filter": None,
-            "tanggal_format": None,
-            "clean_hp": False,
-            "replace_nan_string": True,
-            "sales_filter":  None,
-            "sales_exclude": None,
-            "kolom_map": {
-                "Tanggal":         "Tanggal",
-                "Kode #":          "Kode #",
-                "Nama Barang":     "Nama Barang",
-                "Kuantitas":       "Kuantitas",
-                "Penjualan":       "Penjualan",
-                "Satuan":          "Satuan",
-                "Tipe Transaksi":  "Tipe Transaksi",
-                "Pelanggan":                "Pelanggan",
-            },
-            "kolom_alamat":     None,
-            "kolom_kota_after": None,
-            "kota_upper":       False,
-            "kolom_hp":         None,
-            "kolom_numeric":    ["Kuantitas", "Penjualan"],
-            "kolom_tanggal":    ["Tanggal"],
+    "Penjualan PerBarang": {
+        "output_file": "CLEANING_PENJUALAN_PERBARANG.xlsx",
+        "sheet_name": "Penjualan PerBarang",
+        "use_master_kota": False,
+        "sku_filter": None,
+        "tanggal_format": None,
+        "clean_hp": False,
+        "replace_nan_string": True,
+        "sales_filter":  None,
+        "sales_exclude": None,
+        "pelanggan_exclude": ["CV. PACU PRESTASI", "CV. HARAPAN BOJONEGORO", "PT RATNA ASIA"],
+        "kolom_map": {
+            "Tanggal":         "Tanggal",
+            "Kode #":          "Kode #",
+            "Nama Barang":     "Nama Barang",
+            "Kuantitas":       "Kuantitas",
+            "Penjualan":       "Penjualan",
+            "Satuan":          "Satuan",
+            "Tipe Transaksi":  "Tipe Transaksi",
+            "Pelanggan":       "Pelanggan",
         },
+        "kolom_alamat":     None,
+        "kolom_kota_after": None,
+        "kota_upper":       False,
+        "kolom_hp":         None,
+        "kolom_numeric":    ["Kuantitas", "Penjualan"],
+        "kolom_tanggal":    ["Tanggal"],
+    },
 
     "Filter SKU Diskon (Bu Dhany)": {
         "type": "merge_sku",
@@ -280,7 +280,7 @@ TEMPLATES = {
         "use_master_kota": False,
     },
 
-        "KUADRAN STREAMLIT": {
+    "KUADRAN STREAMLIT": {
         "type": "kuadran_streamlit",
         "output_file": "DATA_KUADRAN_STREAMLIT.xlsx",
         "sheet_name": "DATA",
@@ -463,7 +463,7 @@ def insert_kota_after(df, after_col, kota_series):
     idx  = cols.index(after_col) + 1
     df.insert(idx, 'Kota', kota_series)
     return df
-    
+
 def sort_tanggal(df, col='Tanggal'):
     """Urutkan ascending berdasarkan kolom tanggal (lama → baru).
     Aman jika kolom tidak ada / masih bertipe string."""
@@ -474,6 +474,11 @@ def sort_tanggal(df, col='Tanggal'):
               .sort_values('_sort_key', ascending=True, kind='stable', na_position='last')
               .drop(columns='_sort_key')
               .reset_index(drop=True))
+
+def norm_name(s):
+    """Normalisasi nama: kapital, titik/koma dibuang, spasi ganda dirapikan.
+    Jadi 'CV. PACU PRESTASI' = 'CV PACU PRESTASI' = 'cv.  pacu prestasi'."""
+    return re.sub(r'\s+', ' ', re.sub(r'[.,]', ' ', str(s))).strip().upper()
 
 # ============================================================
 # STYLING
@@ -580,6 +585,8 @@ with st.sidebar:
             st.write(f"👤 Filter Sales (hanya): `{'`, `'.join(cfg['sales_filter'])}`")
         if cfg.get("sales_exclude"):
             st.write(f"🚫 Exclude Sales: `{'`, `'.join(cfg['sales_exclude'])}` + kosong")
+        if cfg.get("pelanggan_exclude"):
+            st.write(f"🚫 Exclude Pelanggan: `{'`, `'.join(cfg['pelanggan_exclude'])}`")
 
     st.divider()
 
@@ -607,7 +614,7 @@ if cfg.get("type") == "merge_sku":
             sku_df.columns = sku_df.columns.str.strip()
             trx_df.columns = trx_df.columns.str.strip()
 
-                        # Validasi kolom wajib saja
+            # Validasi kolom wajib saja
             for col in cfg["sku_cols"]:
                 if col not in sku_df.columns:
                     st.error(f"❌ Kolom **'{col}'** tidak ditemukan di SKU List!")
@@ -949,7 +956,7 @@ elif cfg.get("type") == "kuadran_streamlit":
             c3.markdown(f'<div class="stat-card" style="border-left-color:#7c3aed"><div class="label">SKU Unik</div><div class="value" style="color:#7c3aed">{df_clean["Kode #"].nunique():,}</div></div>', unsafe_allow_html=True)
             c4.markdown(f'<div class="stat-card" style="border-left-color:#16a34a"><div class="label">Pelanggan Unik</div><div class="value" style="color:#16a34a">{df_clean["Pelanggan"].nunique():,}</div></div>', unsafe_allow_html=True)
             c5.markdown(f'<div class="stat-card" style="border-left-color:#ea580c"><div class="label">Merek Unik</div><div class="value" style="color:#ea580c">{df_clean["Nama Merek Barang Barang & Jasa"].nunique():,}</div></div>', unsafe_allow_html=True)
-            
+
             st.markdown("<br>", unsafe_allow_html=True)
             st.dataframe(df_clean.head(20), use_container_width=True)
 
@@ -1051,7 +1058,7 @@ else:
                         if pd.isna(val):
                             return val
                         s = str(val).upper().strip()
-                        if cfg.get("kota_strip_prefix", True): # kapital aja
+                        if cfg.get("kota_strip_prefix", True):  # kapital aja
                             s = re.sub(r'^KOTA\s+', '', s)
                             s = re.sub(r'^KAB\.\s*', '', s)
                             s = re.sub(r'^KABUPATEN\s+', '', s)
@@ -1109,6 +1116,17 @@ else:
                     )
                     df_clean = df_clean[mask_exclude].reset_index(drop=True)
                 # ── End Filter/Exclude Sales ───────────────────────────
+
+                # ── Exclude Pelanggan (buang pelanggan tertentu) ───────
+                n_before_pel = len(df_clean)
+                if cfg.get("pelanggan_exclude") and "Pelanggan" in df_clean.columns:
+                    excluded_pel = {norm_name(p) for p in cfg["pelanggan_exclude"]}
+                    mask_pel = df_clean["Pelanggan"].apply(
+                        lambda x: norm_name(x) in excluded_pel if pd.notna(x) else False
+                    )
+                    df_clean = df_clean[~mask_pel].reset_index(drop=True)
+                # ── End Exclude Pelanggan ──────────────────────────────
+
                 # ── Fill Nama Tenaga Penjual dari Pelanggan (khusus template tertentu) ──
                 if cfg.get("fill_sales_from_pelanggan") \
                         and "Nama Tenaga Penjual" in df_clean.columns \
@@ -1132,6 +1150,8 @@ else:
                 stats.append(("Dihapus (Sales Filter)", n_before_sales - len(df_clean), "#dc2626"))
             if cfg.get("sales_exclude"):
                 stats.append(("Dihapus (Sales Exclude)", n_before_exclude - len(df_clean), "#dc2626"))
+            if cfg.get("pelanggan_exclude"):
+                stats.append(("Dihapus (Pelanggan Exclude)", n_before_pel - len(df_clean), "#dc2626"))
             if cfg["sku_filter"]:
                 stats.append(("Setelah Filter SKU", len(df_clean), "#7c3aed"))
                 stats.append(("Dihapus (SKU)", n_before - len(df_clean), "#dc2626"))
