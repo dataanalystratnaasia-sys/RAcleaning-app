@@ -232,7 +232,6 @@ TEMPLATES = {
             "Nama Barang":     "Nama Barang",
             "Kuantitas":       "Kuantitas",
             "Penjualan":       "Penjualan",
-            "Satuan":          "Satuan",
             "Tipe Transaksi":  "Tipe Transaksi",
             "Pelanggan":       "Pelanggan",
         },
